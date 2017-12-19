@@ -2,8 +2,6 @@ import time
 
 import tensorflow as tf
 
-from app import LOGGER
-
 
 def touch(fname: str, times=None, create_dirs: bool = False):
     import os
@@ -104,10 +102,11 @@ class JobContext(object):
 
     def __enter__(self):
         self.start = time.clock()
+        print(self._msg, end='')
 
     def __exit__(self, typ, value, traceback):
         self.duration = time.clock() - self.start
-        LOGGER.info("{1}    [{0:.3f} secs]".format(self.duration, self._msg))
+        print('    [%.3f secs]\n' % self.duration)
 
 
 def get_last_output(output, sequence_length, name):
