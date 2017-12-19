@@ -1,12 +1,7 @@
 from logging import Logger
 
-from utils.baseconfig import BaseConfig
-from utils.helper import JobContext
+from utils.config import AppConfig, ModelParameter
 
-CONFIG = BaseConfig.load_config('config/app.yaml')['default']
-LOGGER = CONFIG.logger  # type: Logger
-
-print(CONFIG)
-
-with JobContext('testing'):
-    a = 1
+APP_CONFIG = AppConfig.load_config('config/app.yaml')['default']
+MODEL_CONFIG = APP_CONFIG.model_parameter  # type: ModelParameter
+LOGGER = APP_CONFIG.logger  # type: Logger

@@ -1,5 +1,5 @@
-# YAML
-default: &DEFAULT !BaseParameter
+# YAML settings for the model parameters
+default: &DEFAULT !ModelParameter
   batch_size: 100
   split_ratio: 0.6
   train_embedding: true
@@ -16,7 +16,7 @@ default: &DEFAULT !BaseParameter
   loss: logisitc
   input_data: big.json.gz
 
-development: !BaseParameter
+development: !ModelParameter
   <<: *DEFAULT
   test_interval: 10
   input_data: toy.json.gz
