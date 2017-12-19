@@ -100,7 +100,7 @@ ENV/
 # mypy
 .mypy_cache/
 
-.idea
+.idea/*
 .DS_Store
 */log/
 log/
