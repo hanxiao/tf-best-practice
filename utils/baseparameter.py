@@ -41,4 +41,4 @@ class BaseParameter:
         yaml.register_class(BaseParameter)
 
         with open(fn) as fp:
-            return yaml.load(fp.read())  # type:
+            return yaml.load(fp.read())

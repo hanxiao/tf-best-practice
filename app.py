@@ -1,5 +1,10 @@
+from logging import Logger
+
 from utils.baseconfig import BaseConfig
 
-a = BaseConfig.load_config('config/app.yaml')
+CONFIG = BaseConfig.load_config('config/app.yaml')['default']
+LOGGER = CONFIG.logger  # type: Logger
 
-b = 1
+LOGGER.info('start')
+print(CONFIG)
+LOGGER.info('end')

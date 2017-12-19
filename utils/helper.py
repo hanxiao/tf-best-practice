@@ -1,13 +1,28 @@
-import subprocess
 import time
-from threading import Thread, Event
 
 import tensorflow as tf
 
-from configs import *
+from app import LOGGER
+
+
+def touch(fname: str, times=None, create_dirs: bool = False):
+    import os
+    if create_dirs:
+        base_dir = os.path.dirname(fname)
+        if not os.path.exists(base_dir):
+            os.makedirs(base_dir)
+    with open(fname, 'a'):
+        os.utime(fname, times)
+
+
+def touch_dir(base_dir: str) -> None:
+    import os
+    if not os.path.exists(base_dir):
+        os.makedirs(base_dir)
 
 
 def now_int():
+    from datetime import datetime
     epoch = datetime.utcfromtimestamp(0)
     return (datetime.now() - epoch).total_seconds()
 
@@ -93,62 +108,6 @@ class JobContext(object):
     def __exit__(self, typ, value, traceback):
         self.duration = time.clock() - self.start
         LOGGER.info("{1}    [{0:.3f} secs]".format(self.duration, self._msg))
-
-
-class UploadS3Thread(Thread):
-    def __init__(self, event: Event):
-        super().__init__()
-        self.stopped = event
-
-    def run(self):
-        while not self.stopped.wait(SYNC_INTERVAL):
-            upload_result_s3()
-
-
-def upload_result_s3():
-    LOGGER.info("Syncing data to S3...")
-    with open(LOG_PATH, 'a', 1) as logfile:
-        proc = subprocess.Popen(
-            "bash %s %s %s" % (SYNC_SCRIPT_PATH, LOG_PATH, LOG_DIR),
-            shell=True,
-            stdin=subprocess.PIPE,
-            stdout=logfile,
-            stderr=logfile,
-            cwd=ROOT_DIR,
-            env=os.environ)
-
-        # we have to wait until the training data is downloaded
-        try:
-            outs, errs = proc.communicate(timeout=SYNC_TIMEOUT)
-            if outs:
-                LOGGER.info(outs)
-            if errs:
-                LOGGER.error(errs)
-        except subprocess.TimeoutExpired:
-            proc.kill()
-
-
-def download_s3_data():
-    LOGGER.info("loading data from S3...")
-    with open(LOG_PATH, 'a', 1) as logfile:
-        proc = subprocess.Popen(
-            "aws s3 sync s3://query2fdna-data/ %s --region=eu-central-1" % DATA_DIR,
-            shell=True,
-            stdin=subprocess.PIPE,
-            stdout=logfile,
-            stderr=logfile,
-            cwd=ROOT_DIR,
-            env=os.environ)
-
-        # we have to wait until the training data is downloaded
-        try:
-            outs, errs = proc.communicate(timeout=SYNC_TIMEOUT)
-            if outs:
-                LOGGER.info(outs)
-            if errs:
-                LOGGER.error(errs)
-        except subprocess.TimeoutExpired:
-            proc.kill()
 
 
 def get_last_output(output, sequence_length, name):

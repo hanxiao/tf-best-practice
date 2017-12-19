@@ -4,7 +4,7 @@ default: &DEFAULT !BaseConfig
   data_dir: data/
   log_dir: log/
   script_dir: script/
-  parameter_yaml: config/parameter.yaml
+  parameter_file: config/parameter.yaml
   parameter_profile: default
   log_format: '%(asctime)s:%(filename)s:%(funcName)s:[%(levelname)s] %(message)s'
 
