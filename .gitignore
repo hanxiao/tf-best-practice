@@ -100,7 +100,7 @@ ENV/
 # mypy
 .mypy_cache/
 
-.idea/*
+.idea/vcs.xml
 .DS_Store
 */log/
 log/
@@ -110,3 +110,8 @@ figure/
 scm-source.json
 research-lab-docker
 tunnel-*.sh
+.idea/inspectionProfiles/
+.idea/modules.xml
+.idea/tf-best-practice.iml
+.idea/workspace.xml
+test.yaml
