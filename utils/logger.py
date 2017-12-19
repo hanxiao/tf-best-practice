@@ -1,7 +1,3 @@
-def namer(name):
-    return name + ".gz"
-
-
 def rotator(source, dest):
     import gzip, os
     with open(source, "rb") as sf:

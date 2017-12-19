@@ -2,7 +2,7 @@ import copy
 
 import tensorflow as tf
 
-from configs import LOGGER
+from app import LOGGER
 
 
 def dRNN(cell, inputs, rate, init_state, scope='default'):
