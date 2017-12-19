@@ -99,3 +99,14 @@ ENV/
 
 # mypy
 .mypy_cache/
+
+.idea
+.DS_Store
+*/log/
+log/
+save/
+data/
+figure/
+scm-source.json
+research-lab-docker
+tunnel-*.sh

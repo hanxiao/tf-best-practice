@@ -1,0 +1,16 @@
+# YAML
+default: &DEFAULT !BaseConfig
+  work_dir: /Users/hxiao/Documents/tf-best-practice/
+  data_dir: data/
+  log_dir: log/
+  script_dir: script/
+  parameter_yaml: parameter.yaml
+  parameter_profile: default
+  log_format: '%(asctime)s:%(filename)s:%(funcName)s:[%(levelname)s] %(message)s'
+
+remote: !BaseConfig
+  <<: *DEFAULT
+  work_dir: /opt/workspace/
+  parameter_profile: development
+
+
