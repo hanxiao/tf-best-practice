@@ -27,7 +27,7 @@ class BaseConfig:
         return self.work_dir + self.script_dir
 
     @lazy
-    def get_model_parameter(self):
+    def model_parameter(self):
         from .baseparameter import BaseParameter
         return BaseParameter.load_config(self.parameter_yaml)[self.parameter_profile]
 

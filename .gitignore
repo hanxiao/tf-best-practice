@@ -111,3 +111,4 @@ scm-source.json
 research-lab-docker
 tunnel-*.sh
 test.yaml
+/.idea/
