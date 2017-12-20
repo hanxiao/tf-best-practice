@@ -7,5 +7,5 @@ if __name__ == "__main__":
     sess = tf.Session()
     data.init_train_data_op(sess)
     for _ in range(10):
-        print(sess.run(data.X_r))
+        print(sess.run(data.X_s))
     pass

@@ -71,11 +71,11 @@ class DataReader:
             sent_ds = Dataset.from_tensor_slices(self.ph_sent)
             room_ds = Dataset.from_tensor_slices(self.ph_room)
             user_ds = Dataset.from_tensor_slices(self.ph_user)
-            dataset = Dataset.zip((room_ds, user_ds)).repeat().batch(32)
+            dataset = Dataset.zip((sent_ds, room_ds, user_ds)).repeat().batch(32)
 
         with JobContext('init iterators...', LOGGER):
             iterator = dataset.make_initializable_iterator()
-            (self.X_r, self.X_u) = iterator.get_next()
+            (self.X_s, self.X_r, self.X_u) = iterator.get_next()
             self.iter_init_op = iterator.make_initializer(dataset)
 
             self.train_data = (
