@@ -3,7 +3,7 @@ import json
 import dask.bag as db
 
 from config import APP_CONFIG, LOGGER
-from .helper import JobContext
+from .logger import JobContext
 
 
 def load_dataset(len_threshold: int = 100):
