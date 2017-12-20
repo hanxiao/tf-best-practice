@@ -4,7 +4,8 @@ default: &DEFAULT !AppConfig
   data_dir: data/
   log_dir: log/
   script_dir: script/
-  parameter_file: config/parameter.yaml
+  data_file: data/*/db.json.2017-*-*.gz
+  parameter_file: settings/parameter.yaml
   parameter_profile: default
   log_format: '%(asctime)s:%(filename)s:%(funcName)s:[%(levelname)s] %(message)s'
 

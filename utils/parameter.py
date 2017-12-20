@@ -1,4 +1,3 @@
-from logging import Logger
 from typing import Dict
 
 
@@ -54,7 +53,8 @@ class AppConfig:
                  script_dir,
                  parameter_file,
                  parameter_profile,
-                 log_format):
+                 log_format,
+                 data_file):
         self.work_dir = work_dir
         self.data_dir = data_dir
         self.log_dir = log_dir
@@ -62,6 +62,7 @@ class AppConfig:
         self.parameter_file = parameter_file
         self.parameter_profile = parameter_profile
         self.log_format = log_format
+        self.data_file = data_file
 
     def get_data_dir(self):
         return self.work_dir + self.data_dir
@@ -83,7 +84,7 @@ class AppConfig:
         return ModelParameter.load_config(self.parameter_file)[self.parameter_profile]
 
     @lazy
-    def logger(self) -> Logger:
+    def logger(self):
         from utils.logger import get_logger
         return get_logger(__name__, self.log_path, self.log_format)
 
