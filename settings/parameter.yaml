@@ -14,9 +14,7 @@ default: &DEFAULT !ModelParameter
   decay_rate: 0.97
   test_interval: 1
   loss: logisitc
-  input_data: big.json.gz
 
 development: !ModelParameter
   <<: *DEFAULT
   test_interval: 10
-  input_data: toy.json.gz

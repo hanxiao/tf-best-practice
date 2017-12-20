@@ -1,67 +1,43 @@
-import json
-
-import dask.bag as db
+import numpy as np
 import tensorflow as tf
 
-from config import LOGGER
-from utils.helper import JobContext
+from utils.reader import load_dataset
 
-with JobContext('indexing all chars/chatrooms/users...', LOGGER):
-    b = db.read_text('data/*/db.json.2017-*-*.gz').map(json.loads)
-    msg_stream = b.filter(lambda x: x['msgType'] == 'Text')
-    text_stream = msg_stream.pluck('text').distinct()
-    chatroom_stream = msg_stream.pluck('chatroomName').distinct()
-    user_stream = msg_stream.pluck('fromUser').distinct()
+a = load_dataset()
 
-    all_chars = sorted(text_stream.flatten().filter(lambda x: x).distinct())
-    all_rooms = sorted(chatroom_stream.compute())
-    all_users = sorted(user_stream.compute())
+sent_ds = tf.data.Dataset.from_tensor_slices(a['data_sent'])
+room_ds = tf.data.Dataset.from_tensor_slices(a['data_room'])
+user_ds = tf.data.Dataset.from_tensor_slices(a['data_user'])
 
-    char_unknown_int = 0
-    preserved_ints = 1
-    char2int_map = {c: idx + preserved_ints for idx, c in enumerate(all_chars)}
+dataset = tf.data.Dataset.zip((sent_ds, room_ds, user_ds))
 
-    room_unknown_int = len(char2int_map)
-    preserved_ints += len(char2int_map) + 1
-    room2int_map = {c: idx + preserved_ints for idx, c in enumerate(all_rooms)}
+data1 = np.transpose(np.tile(list(range(10000)), [2, 1]))
+data2 = -data1
 
-    user_unknown_int = len(room2int_map)
-    preserved_ints += len(room2int_map) + 1
-    user2int_map = {c: idx + preserved_ints for idx, c in enumerate(all_users)}
+D1 = tf.placeholder(tf.int32, shape=[None, None])
+D2 = tf.placeholder(tf.int32, shape=[None, None])
+dataset1 = tf.data.Dataset.from_tensor_slices(D1)  # type: tf.data.Dataset
+dataset2 = tf.data.Dataset.from_tensor_slices(D2)
+dataset = tf.data.Dataset.zip((dataset1, dataset2))
+dataset = dataset.repeat()  # type: tf.data.Dataset
+dataset = dataset.batch(32)  # type: tf.data.Dataset
 
-    preserved_ints += len(user2int_map)
+iterator = dataset.make_initializable_iterator()
 
-max_len = text_stream.map(len).max().compute()
-num_sent = text_stream.count().compute()
-num_room = chatroom_stream.count().compute()
-num_user = user_stream.count().compute()
-num_char = len(char2int_map)
+(ne1, ne2) = iterator.get_next()
 
-LOGGER.info('unique sentences: %d' % num_sent)
-LOGGER.info('unique chars: %d' % num_char)
-LOGGER.info('unique rooms: %d' % num_room)
-LOGGER.info('unique users: %d' % num_user)
-LOGGER.info('max sequence length: %d' % max_len)
-LOGGER.info('vocabulary size: %d' % preserved_ints)
+training_init_op = iterator.make_initializer(dataset)
 
-len_hist = db.from_sequence(sorted(text_stream.map(len).frequencies())) \
-    .accumulate(lambda x, y: (y[0], (x[1] * num_sent + y[1]) / num_sent), (0, 0)) \
-    .map(lambda x: '%d: %.4f%%' % (x[0], x[1] * 100)).compute()
+sess = tf.Session()
 
-LOGGER.info('histogram of sent length: %s' % len_hist)
+# Initialize an iterator over a dataset with 10 elements.
+sess.run(training_init_op, feed_dict={D1: data1, D2: data2})
+for _ in range(10):
+    value = sess.run(ne1)
+    print(value)
 
-len_threshold = 20
-LOGGER.info('maximum length of training sent: %d' % len_threshold)
-
-d = (
-    msg_stream.filter(lambda x: len(x['text']) <= len_threshold).map(
-        lambda x: ([char2int_map.get(c, char_unknown_int) for c in x['text']] + [0] * (len_threshold - len(x)),
-                   room2int_map.get(x['chatroomName'], room_unknown_int),
-                   user2int_map.get(x['fromUser'], user_unknown_int))))
-
-sent_ph = tf.placeholder(tf.int32, )
-
-print(d.take(10))
-print(d.pluck(0).take(10))
-print(d.pluck(1).take(10))
-print(d.pluck(2).take(10))
+# Initialize the same iterator over a dataset with 100 elements.
+sess.run(training_init_op, feed_dict={D1: data2, D2: data1})
+for _ in range(100):
+    value = sess.run(ne2)
+    print(value)
