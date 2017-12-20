@@ -3,3 +3,4 @@ tensorflow-gpu>=1.1.0
 psutil>=5.2.2
 ruamel.yaml<=0.15
 lazy>=1.3
+dask >= 0.16.0

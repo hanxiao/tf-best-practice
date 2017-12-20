@@ -1,4 +1,5 @@
 import time
+from logging import Logger
 
 import tensorflow as tf
 
@@ -96,17 +97,22 @@ def on_grid(kernel, grid_side, pad=1):
     return tf.image.convert_image_dtype(x7, dtype=tf.uint8)
 
 
-class JobContext(object):
-    def __init__(self, msg):
+class JobContext:
+    def __init__(self, msg, logger: Logger = None):
         self._msg = msg
+        self._logger = logger
 
     def __enter__(self):
         self.start = time.clock()
-        print(self._msg, end='')
+        if not self._logger:
+            print(self._msg, end='')
 
     def __exit__(self, typ, value, traceback):
         self.duration = time.clock() - self.start
-        print('    [%.3f secs]\n' % self.duration)
+        if not self._logger:
+            print('    [%.3f secs]\n' % self.duration)
+        else:
+            self._logger.info('%s    [%.3f secs]' % (self._msg, self.duration))
 
 
 def get_last_output(output, sequence_length, name):
