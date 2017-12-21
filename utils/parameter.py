@@ -3,23 +3,19 @@ from ruamel.yaml import YAML
 from tensorflow.contrib.training import HParams
 
 
-class ModelParameter(HParams):
+class YParams(HParams):
     def __init__(self, yaml_fn, config_name):
         super().__init__()
         with open(yaml_fn) as fp:
-            r = YAML().load(fp)[config_name]
-        for k, v in r.items():
-            self.add_hparam(k, v)
+            for k, v in YAML().load(fp)[config_name].items():
+                self.add_hparam(k, v)
 
 
-class AppConfig(HParams):
-    def __init__(self, yaml_fn, config_name):
-        super().__init__()
-        with open(yaml_fn) as fp:
-            r = YAML().load(fp)[config_name]
-        for k, v in r.items():
-            self.add_hparam(k, v)
+class ModelParameter(YParams):
+    pass
 
+
+class AppConfig(YParams):
     def get_data_dir(self):
         return self.work_dir + self.data_dir
 
