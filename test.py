@@ -22,6 +22,6 @@ from utils.parameter import AppConfig
 
 appconfig = AppConfig('settings/app.yaml', 'debug')
 print(appconfig.values())
-print(appconfig.get_data_dir())
-print(appconfig.get_log_dir())
+print(appconfig.data_dir)
+print(appconfig.log_dir)
 print(appconfig.model_parameter.optimizer)
