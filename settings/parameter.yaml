@@ -15,6 +15,7 @@ default: &DEFAULT
   test_interval: 1
   loss: logisitc
   len_threshold: 100
+  loss_at_each_step: true
 
 large_hidden: &SET1
   <<: *DEFAULT
@@ -24,3 +25,4 @@ debug:
   <<: *SET1
   len_threshold: 10
   batch_size: 10
+  num_hidden: 10

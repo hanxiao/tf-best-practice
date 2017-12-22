@@ -23,18 +23,18 @@ class InputData:
             all_users = sorted(user_stream.compute())
 
             unknown_char_idx = 0
-            preserved_ints = 1
-            char2int_map = {c: idx + preserved_ints for idx, c in enumerate(all_chars)}
+            reserved_chars = 1
+            char2int_map = {c: idx + reserved_chars for idx, c in enumerate(all_chars)}
 
             unknown_room_idx = len(char2int_map)
-            preserved_ints += len(char2int_map) + 1
-            room2int_map = {c: idx + preserved_ints for idx, c in enumerate(all_rooms)}
+            reserved_chars += len(char2int_map) + 1
+            room2int_map = {c: idx + reserved_chars for idx, c in enumerate(all_rooms)}
 
             unknown_user_idx = len(room2int_map)
-            preserved_ints += len(room2int_map) + 1
-            user2int_map = {c: idx + preserved_ints for idx, c in enumerate(all_users)}
+            reserved_chars += len(room2int_map) + 1
+            user2int_map = {c: idx + reserved_chars for idx, c in enumerate(all_users)}
 
-            preserved_ints += len(user2int_map)
+            reserved_chars += len(user2int_map)
 
         with JobContext('computing some statistics...', LOGGER):
             max_len = text_stream.map(len).max().compute()
@@ -51,7 +51,7 @@ class InputData:
             LOGGER.info('unique rooms: %d' % num_room)
             LOGGER.info('unique users: %d' % num_user)
             LOGGER.info('max sequence length: %d' % max_len)
-            LOGGER.info('vocabulary size: %d' % preserved_ints)
+            LOGGER.info('vocabulary size: %d' % reserved_chars)
             LOGGER.info('histogram of sent length: %s' % len_hist)
             LOGGER.info('maximum length of training sent: %d' % MODEL_CONFIG.len_threshold)
 
@@ -82,6 +82,7 @@ class InputData:
             (self.X_s, self.X_r, self.X_u) = iterator.get_next()
 
         self.num_char = num_char
+        self.num_reserved_char = reserved_chars
         self.num_sent = num_sent
         self.num_room = num_room
         self.num_user = num_user
