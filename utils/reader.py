@@ -74,11 +74,15 @@ class DataReader:
                     yield all_sents[i]
 
             sent_ds = Dataset.from_generator(generator=gen, output_types=tf.int32,
-                                             output_shapes=tf.TensorShape([None]))  # type: Dataset
-            sent_ds = sent_ds.padded_batch(MODEL_CONFIG.batch_size, padded_shapes=[None])
+                                             output_shapes=[None])  # type: Dataset
             room_ds = Dataset.from_tensor_slices(self.ph_room)
             user_ds = Dataset.from_tensor_slices(self.ph_user)
-            dataset = Dataset.zip((sent_ds, room_ds, user_ds))
+            dataset = (
+                Dataset.zip((sent_ds, room_ds, user_ds))
+                    .shuffle(buffer_size=10000)
+                    .repeat()  # first do repeat
+                    .padded_batch(MODEL_CONFIG.batch_size, padded_shapes=([None], [], []))
+            )  # type: Dataset
 
         with JobContext('init iterators...', LOGGER):
             iterator = dataset.make_initializable_iterator()
@@ -105,6 +109,5 @@ class DataReader:
 
     def init_train_data_op(self, tf_sess):
         tf_sess.run(self.iter_init_op,
-                    feed_dict={
-                        self.ph_room: self.train_data[0],
-                        self.ph_user: self.train_data[1]})
+                    feed_dict={self.ph_room: self.train_data[0],
+                               self.ph_user: self.train_data[1]})
