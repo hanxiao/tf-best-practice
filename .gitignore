@@ -112,3 +112,4 @@ tunnel-*.sh
 test.yaml
 /.idea/
 *.iml
+test*.py
