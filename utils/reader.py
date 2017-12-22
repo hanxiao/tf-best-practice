@@ -1,17 +1,16 @@
+import itertools
 import json
 
 import dask.bag as db
-import numpy as np
 import tensorflow as tf
 from tensorflow.python.data import Dataset
 
-from config import APP_CONFIG, LOGGER
+from config import APP_CONFIG, LOGGER, MODEL_CONFIG
 from .logger import JobContext
 
 
 class DataReader:
     def __init__(self):
-        len_threshold = 10
         with JobContext('indexing all chars/chatrooms/users...', LOGGER):
             b = db.read_text(APP_CONFIG.data_file).map(json.loads)
             msg_stream = b.filter(lambda x: x['msgType'] == 'Text')
@@ -54,24 +53,32 @@ class DataReader:
             LOGGER.info('max sequence length: %d' % max_len)
             LOGGER.info('vocabulary size: %d' % preserved_ints)
             LOGGER.info('histogram of sent length: %s' % len_hist)
-            LOGGER.info('maximum length of training sent: %d' % len_threshold)
+            LOGGER.info('maximum length of training sent: %d' % MODEL_CONFIG.len_threshold)
 
         with JobContext('building dataset...', LOGGER):
             d = (
-                msg_stream.filter(lambda x: len(x['text']) <= len_threshold).map(
+                msg_stream.filter(lambda x: len(x['text']) <= MODEL_CONFIG.len_threshold).map(
                     lambda x: (
-                        [char2int_map.get(c, unknown_char_idx) for c in x['text']] + [0] * (
-                            len_threshold - len(x['text'])),
+                        [char2int_map.get(c, unknown_char_idx) for c in x['text']],
                         room2int_map.get(x['chatroomName'], unknown_room_idx),
                         user2int_map.get(x['fromUser'], unknown_user_idx))))
 
             self.ph_sent = tf.placeholder(tf.int32, [None, None], name='input_sequence')
             self.ph_room = tf.placeholder(tf.int32, [None], name='input_room')
             self.ph_user = tf.placeholder(tf.int32, [None], name='input_user')
-            sent_ds = Dataset.from_tensor_slices(self.ph_sent)
+
+            all_sents = d.pluck(0).compute()
+
+            def gen():
+                for i in itertools.count(0):
+                    yield all_sents[i]
+
+            sent_ds = Dataset.from_generator(generator=gen, output_types=tf.int32,
+                                             output_shapes=tf.TensorShape([None]))  # type: Dataset
+            sent_ds = sent_ds.padded_batch(MODEL_CONFIG.batch_size, padded_shapes=[None])
             room_ds = Dataset.from_tensor_slices(self.ph_room)
             user_ds = Dataset.from_tensor_slices(self.ph_user)
-            dataset = Dataset.zip((sent_ds, room_ds, user_ds)).repeat().batch(32)
+            dataset = Dataset.zip((sent_ds, room_ds, user_ds))
 
         with JobContext('init iterators...', LOGGER):
             iterator = dataset.make_initializable_iterator()
@@ -79,9 +86,8 @@ class DataReader:
             self.iter_init_op = iterator.make_initializer(dataset)
 
             self.train_data = (
-                np.array(d.pluck(0).compute(), dtype=np.int32),
-                np.array(d.pluck(1).compute(), dtype=np.int32),
-                np.array(d.pluck(2).compute(), dtype=np.int32))
+                d.pluck(1).compute(),
+                d.pluck(2).compute())
 
         self.num_char = num_char
         self.num_sent = num_sent
@@ -94,13 +100,11 @@ class DataReader:
         self.unknown_char_idx = unknown_char_idx
         self.unknown_user_idx = unknown_user_idx
         self.unknown_room_idx = unknown_room_idx
-        self.len_threshold = len_threshold
 
         LOGGER.info('data loading finished!')
 
     def init_train_data_op(self, tf_sess):
         tf_sess.run(self.iter_init_op,
                     feed_dict={
-                        self.ph_sent: self.train_data[0],
-                        self.ph_room: self.train_data[1],
-                        self.ph_user: self.train_data[2]})
+                        self.ph_room: self.train_data[0],
+                        self.ph_user: self.train_data[1]})

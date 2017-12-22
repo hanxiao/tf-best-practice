@@ -14,11 +14,13 @@ default: &DEFAULT
   decay_rate: 0.97
   test_interval: 1
   loss: logisitc
+  len_threshold: 100
 
 large_hidden: &SET1
   <<: *DEFAULT
   num_hidden: 1024
 
-lstm_large:
+debug:
   <<: *SET1
-  cell: lstm
+  len_threshold: 10
+  batch_size: 10
