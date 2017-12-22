@@ -14,8 +14,9 @@ class NADE:
 
         cur_batch_B = tf.shape(input_data.X_s)[0]
         cur_batch_T = tf.shape(input_data.X_s)[1]
+        cur_batch_D = input_data.num_char
 
-        Xs_embd = tf.one_hot(input_data.X_s, input_data.num_char)
+        Xs_embd = tf.one_hot(input_data.X_s, cur_batch_D)
         X_ta = tf.TensorArray(size=cur_batch_T, dtype=tf.float32).unstack(
             _transpose_batch_time(Xs_embd), 'TBD_Formatted_X')
 
@@ -25,7 +26,7 @@ class NADE:
         }[MODEL_CONFIG.cell]()
 
         output_layer_info = {
-            'units': input_data.num_char,  # this is the size of vocabulary
+            'units': cur_batch_D,  # this is the size of vocabulary
             'name': 'out_to_character',
             # linear 'activation': tf.nn.softmax
         }
@@ -45,7 +46,7 @@ class NADE:
                                dtype=tf.int32)
 
         def get_sample(cell_out):
-            return tf.one_hot(get_dist(cell_out).sample(), input_data.num_char)
+            return tf.one_hot(get_dist(cell_out).sample(), cur_batch_D)
 
         def get_prob(cell_out, obs):
             # the observation is in
@@ -60,7 +61,7 @@ class NADE:
                              [cur_batch_B, 1])
             cell_init_state = LSTMStateTuple(c_init, h_init)
 
-            first_step = tf.zeros(shape=[cur_batch_B, 1], dtype=tf.float32, name='first_character')
+            first_step = tf.zeros(shape=[cur_batch_B, cur_batch_D], dtype=tf.float32, name='first_character')
 
         with tf.name_scope('NADE'):
             output_ta = tf.TensorArray(size=cur_batch_T, dtype=tf.float32)
