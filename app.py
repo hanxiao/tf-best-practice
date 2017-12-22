@@ -1,11 +1,10 @@
 import tensorflow as tf
 
-from utils.reader import DataReader
+from utils.reader import InputData
 
 if __name__ == "__main__":
-    data = DataReader()
+    data = InputData()
     sess = tf.Session()
-    data.init_train_data_op(sess)
     for _ in range(11):
         print(sess.run([data.X_s, data.X_r, data.X_u]))
     pass

@@ -9,7 +9,7 @@ from config import APP_CONFIG, LOGGER, MODEL_CONFIG
 from .logger import JobContext
 
 
-class DataReader:
+class InputData:
     def __init__(self):
         with JobContext('indexing all chars/chatrooms/users...', LOGGER):
             b = db.read_text(APP_CONFIG.data_file).map(json.loads)
@@ -63,35 +63,23 @@ class DataReader:
                         room2int_map.get(x['chatroomName'], unknown_room_idx),
                         user2int_map.get(x['fromUser'], unknown_user_idx))))
 
-            self.ph_sent = tf.placeholder(tf.int32, [None, None], name='input_sequence')
-            self.ph_room = tf.placeholder(tf.int32, [None], name='input_room')
-            self.ph_user = tf.placeholder(tf.int32, [None], name='input_user')
-
-            all_sents = d.pluck(0).compute()
+            X = d.pluck(0).compute(), d.pluck(1).compute(), d.pluck(2).compute()
 
             def gen():
                 for i in itertools.count(0):
-                    yield all_sents[i]
+                    yield X[0][i], X[1][i], X[2][i]
 
-            sent_ds = Dataset.from_generator(generator=gen, output_types=tf.int32,
-                                             output_shapes=[None])  # type: Dataset
-            room_ds = Dataset.from_tensor_slices(self.ph_room)
-            user_ds = Dataset.from_tensor_slices(self.ph_user)
+            ds = Dataset.from_generator(generator=gen, output_types=(tf.int32, tf.int32, tf.int32),
+                                        output_shapes=([None], [], []))  # type: Dataset
             dataset = (
-                Dataset.zip((sent_ds, room_ds, user_ds))
-                    .shuffle(buffer_size=10000)
+                ds.shuffle(buffer_size=10000)
                     .repeat()  # first do repeat
                     .padded_batch(MODEL_CONFIG.batch_size, padded_shapes=([None], [], []))
             )  # type: Dataset
 
         with JobContext('init iterators...', LOGGER):
-            iterator = dataset.make_initializable_iterator()
+            iterator = dataset.make_one_shot_iterator()
             (self.X_s, self.X_r, self.X_u) = iterator.get_next()
-            self.iter_init_op = iterator.make_initializer(dataset)
-
-            self.train_data = (
-                d.pluck(1).compute(),
-                d.pluck(2).compute())
 
         self.num_char = num_char
         self.num_sent = num_sent
@@ -106,8 +94,3 @@ class DataReader:
         self.unknown_room_idx = unknown_room_idx
 
         LOGGER.info('data loading finished!')
-
-    def init_train_data_op(self, tf_sess):
-        tf_sess.run(self.iter_init_op,
-                    feed_dict={self.ph_room: self.train_data[0],
-                               self.ph_user: self.train_data[1]})
