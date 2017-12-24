@@ -102,8 +102,6 @@ class NADE:
             outputs = _transpose_batch_time(output_ta.stack())
             logits = get_logits(outputs)
             self.X_sampled = _transpose_batch_time(loop_state_ta.stack())
-
-            with tf.name_scope('Decoder_Loss'):
-                self.logp_loss = -tf.reduce_mean(tf.log(1e-6 + get_prob(outputs, input_data.X_s)))
-                self.xentropy_loss = tf.reduce_mean(
-                    tf.nn.sigmoid_cross_entropy_with_logits(labels=Xs_embd, logits=logits))
+            self.logp_loss = -tf.reduce_mean(tf.log(1e-6 + get_prob(outputs, input_data.X_s)))
+            self.xentropy_loss = tf.reduce_mean(
+                tf.nn.sigmoid_cross_entropy_with_logits(labels=Xs_embd, logits=logits))

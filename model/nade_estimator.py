@@ -85,11 +85,9 @@ def model_fn(features, labels, mode, params):
         outputs = _transpose_batch_time(output_ta.stack())
         logits = get_logits(outputs)
         X_sampled = _transpose_batch_time(loop_state_ta.stack())
-
-        with tf.name_scope('Decoder_Loss'):
-            logp_loss = -tf.reduce_mean(tf.log(1e-6 + get_prob(outputs, X_s)))
-            xentropy_loss = tf.reduce_mean(
-                tf.nn.sigmoid_cross_entropy_with_logits(labels=Xs_embd, logits=logits))
+        logp_loss = -tf.reduce_mean(tf.log(1e-6 + get_prob(outputs, X_s)), name='model_loss')
+        xentropy_loss = tf.reduce_mean(
+            tf.nn.sigmoid_cross_entropy_with_logits(labels=Xs_embd, logits=logits))
 
     train_op = tf.train.RMSPropOptimizer(learning_rate=params.learning_rate).minimize(
         loss=logp_loss, global_step=tf.train.get_global_step())

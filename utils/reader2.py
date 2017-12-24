@@ -69,17 +69,8 @@ class InputData:
                 for i in itertools.count(0):
                     yield X[0][i], X[1][i], X[2][i]
 
-            ds = Dataset.from_generator(generator=gen, output_types=(tf.int32, tf.int32, tf.int32),
-                                        output_shapes=([None], [], []))  # type: Dataset
-            dataset = (
-                ds.shuffle(buffer_size=10000)
-                    .repeat()  # first do repeat
-                    .padded_batch(MODEL_CONFIG.batch_size, padded_shapes=([None], [], []))
-            )  # type: Dataset
-
-        with JobContext('init iterators...', LOGGER):
-            iterator = dataset.make_one_shot_iterator()
-            (self.X_s, self.X_r, self.X_u) = iterator.get_next()
+            self.ds = Dataset.from_generator(generator=gen, output_types=(tf.int32, tf.int32, tf.int32),
+                                             output_shapes=([None], [], []))  # type: Dataset
 
         self.num_char = num_char
         self.num_reserved_char = reserved_chars
@@ -95,3 +86,9 @@ class InputData:
         self.unknown_room_idx = unknown_room_idx
 
         LOGGER.info('data loading finished!')
+
+    def train_input_fn(self):
+        return (self.ds.shuffle(buffer_size=10000)
+                .repeat()  # first do repeat
+                .padded_batch(MODEL_CONFIG.batch_size, padded_shapes=([None], [], []))
+                ).make_one_shot_iterator().get_next(), None
