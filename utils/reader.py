@@ -11,9 +11,12 @@ from .logger import JobContext
 
 class InputData:
     def __init__(self):
+        LOGGER.info('maximum length of training sent: %d' % MODEL_CONFIG.len_threshold)
+
         with JobContext('indexing all chars/chatrooms/users...', LOGGER):
             b = db.read_text(APP_CONFIG.data_file).map(json.loads)
-            msg_stream = b.filter(lambda x: x['msgType'] == 'Text')
+            msg_stream = b.filter(lambda x: x['msgType'] == 'Text').filter(
+                lambda x: len(x['text']) <= MODEL_CONFIG.len_threshold)
             text_stream = msg_stream.pluck('text').distinct()
             chatroom_stream = msg_stream.pluck('chatroomName').distinct()
             user_stream = msg_stream.pluck('fromUser').distinct()
@@ -37,23 +40,15 @@ class InputData:
             reserved_chars += len(user2int_map)
 
         with JobContext('computing some statistics...', LOGGER):
-            max_len = text_stream.map(len).max().compute()
             num_sent = text_stream.count().compute()
             num_room = chatroom_stream.count().compute()
             num_user = user_stream.count().compute()
             num_char = len(char2int_map)
-            len_hist = db.from_sequence(sorted(text_stream.map(len).frequencies())) \
-                .accumulate(lambda x, y: (y[0], (x[1] * num_sent + y[1]) / num_sent), (0, 0)) \
-                .map(lambda x: '%d: %.4f%%' % (x[0], x[1] * 100)).compute()
-
             LOGGER.info('unique sentences: %d' % num_sent)
             LOGGER.info('unique chars: %d' % num_char)
             LOGGER.info('unique rooms: %d' % num_room)
             LOGGER.info('unique users: %d' % num_user)
-            LOGGER.info('max sequence length: %d' % max_len)
             LOGGER.info('vocabulary size: %d' % reserved_chars)
-            LOGGER.info('histogram of sent length: %s' % len_hist)
-            LOGGER.info('maximum length of training sent: %d' % MODEL_CONFIG.len_threshold)
 
         with JobContext('building dataset...', LOGGER):
             d = (
@@ -69,24 +64,14 @@ class InputData:
                 for i in itertools.count(0):
                     yield X[0][i], X[1][i], X[2][i]
 
-            ds = Dataset.from_generator(generator=gen, output_types=(tf.int32, tf.int32, tf.int32),
-                                        output_shapes=([None], [], []))  # type: Dataset
-            dataset = (
-                ds.shuffle(buffer_size=10000)
-                    .repeat()  # first do repeat
-                    .padded_batch(MODEL_CONFIG.batch_size, padded_shapes=([None], [], []))
-            )  # type: Dataset
-
-        with JobContext('init iterators...', LOGGER):
-            iterator = dataset.make_one_shot_iterator()
-            (self.X_s, self.X_r, self.X_u) = iterator.get_next()
+            self.ds = Dataset.from_generator(generator=gen, output_types=(tf.int32, tf.int32, tf.int32),
+                                             output_shapes=([None], [], []))  # type: Dataset
 
         self.num_char = num_char
         self.num_reserved_char = reserved_chars
         self.num_sent = num_sent
         self.num_room = num_room
         self.num_user = num_user
-        self.max_len = max_len
         self.char2int = char2int_map
         self.user2int = user2int_map
         self.room2int = room2int_map
@@ -95,3 +80,9 @@ class InputData:
         self.unknown_room_idx = unknown_room_idx
 
         LOGGER.info('data loading finished!')
+
+    def train_input_fn(self):
+        return (self.ds.shuffle(buffer_size=10000)
+                .repeat()  # first do repeat
+                .padded_batch(MODEL_CONFIG.batch_size, padded_shapes=([None], [], []))
+                ).make_one_shot_iterator().get_next(), None
