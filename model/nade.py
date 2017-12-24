@@ -11,7 +11,7 @@ def model_fn(features, labels, mode, params, config):
 
     cur_batch_B = tf.shape(X_s)[0]
     cur_batch_T = tf.shape(X_s)[1]
-    cur_batch_D = config.num_char
+    cur_batch_D = params.num_char
 
     Xs_embd = tf.one_hot(X_s, cur_batch_D)
     X_ta = tf.TensorArray(size=cur_batch_T, dtype=tf.float32).unstack(
