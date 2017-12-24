@@ -4,18 +4,18 @@ import dask.bag as db
 import tensorflow as tf
 from tensorflow.python.data import Dataset
 
-from config import APP_CONFIG, LOGGER, MODEL_CONFIG
+from config import APP_CONFIG, LOGGER, MODEL_PARAM
 from .logger import JobContext
 
 
 class InputData:
     def __init__(self):
-        LOGGER.info('maximum length of training sent: %d' % MODEL_CONFIG.len_threshold)
+        LOGGER.info('maximum length of training sent: %d' % MODEL_PARAM.len_threshold)
 
         with JobContext('indexing all chars/chatrooms/users...', LOGGER):
             b = db.read_text(APP_CONFIG.data_file).map(json.loads)
             msg_stream = b.filter(lambda x: x['msgType'] == 'Text').filter(
-                lambda x: len(x['text']) <= MODEL_CONFIG.len_threshold)
+                lambda x: len(x['text']) <= MODEL_PARAM.len_threshold)
             text_stream = msg_stream.pluck('text').distinct()
             chatroom_stream = msg_stream.pluck('chatroomName').distinct()
             user_stream = msg_stream.pluck('fromUser').distinct()
@@ -51,7 +51,7 @@ class InputData:
 
         with JobContext('building dataset...', LOGGER):
             d = (
-                msg_stream.filter(lambda x: len(x['text']) <= MODEL_CONFIG.len_threshold).map(
+                msg_stream.filter(lambda x: len(x['text']) <= MODEL_PARAM.len_threshold).map(
                     lambda x: (
                         [char2int_map.get(c, unknown_char_idx) for c in x['text']],
                         room2int_map.get(x['chatroomName'], unknown_room_idx),
@@ -78,10 +78,12 @@ class InputData:
         self.unknown_user_idx = unknown_user_idx
         self.unknown_room_idx = unknown_room_idx
 
+        MODEL_PARAM.add_hparam('num_char', num_char)
+
         LOGGER.info('data loading finished!')
 
     def train_input_fn(self):
         return (self.ds.shuffle(buffer_size=10000)
-                .repeat()  # first do repeat
-                .padded_batch(MODEL_CONFIG.batch_size, padded_shapes=([None], [], []))
+                .repeat(MODEL_PARAM.num_epoch)  # first do repeat
+                .padded_batch(MODEL_PARAM.batch_size, padded_shapes=([None], [], []))
                 ).make_one_shot_iterator().get_next(), None

@@ -26,3 +26,4 @@ debug:
   len_threshold: 10
   batch_size: 10
   num_hidden: 10
+  num_epoch: 1

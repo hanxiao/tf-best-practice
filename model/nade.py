@@ -6,12 +6,12 @@ from tensorflow.python.ops.rnn_cell_impl import LSTMStateTuple, LSTMCell
 from utils.slstm import BasicSLSTMCell
 
 
-def model_fn(features, labels, mode, params):
+def model_fn(features, labels, mode, params, config):
     X_s, X_r, X_u = features
 
     cur_batch_B = tf.shape(X_s)[0]
     cur_batch_T = tf.shape(X_s)[1]
-    cur_batch_D = params.num_char
+    cur_batch_D = config.num_char
 
     Xs_embd = tf.one_hot(X_s, cur_batch_D)
     X_ta = tf.TensorArray(size=cur_batch_T, dtype=tf.float32).unstack(
@@ -92,8 +92,12 @@ def model_fn(features, labels, mode, params):
     train_op = tf.train.RMSPropOptimizer(learning_rate=params.learning_rate).minimize(
         loss=logp_loss, global_step=tf.train.get_global_step())
 
+    logging_hook = tf.train.LoggingTensorHook(tensors={"xtropy_loss": "Output/xtropy_loss"},
+                                              every_n_iter=100)
+
     return tf.estimator.EstimatorSpec(
         mode=mode,
         predictions=X_sampled,
         loss=logp_loss,
-        train_op=train_op)
+        train_op=train_op,
+        training_chief_hooks=[logging_hook])
