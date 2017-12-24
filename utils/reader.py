@@ -87,7 +87,7 @@ class InputData:
 
         LOGGER.info('data loading finished!')
 
-    def train_input_fn(self, num_epoch=5):
+    def train_input_fn(self, num_epoch=MODEL_CONFIG.num_epoch):
         return (self.ds.shuffle(buffer_size=10000)
                 .repeat(num_epoch)  # first do repeat
                 .padded_batch(MODEL_CONFIG.batch_size, padded_shapes=([None], [], []))
