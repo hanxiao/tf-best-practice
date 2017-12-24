@@ -16,6 +16,7 @@ default: &DEFAULT
   loss: logisitc
   len_threshold: 100
   loss_at_each_step: true
+  num_validation: 1000
 
 large_hidden: &SET1
   <<: *DEFAULT

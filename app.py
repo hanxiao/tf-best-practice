@@ -10,7 +10,9 @@ tf.logging.set_verbosity(tf.logging.INFO)
 def main(argv):
     input_data = InputData()
     model = tf.estimator.Estimator(model_fn=nade.model_fn, params=MODEL_PARAM)
-    model.train(input_data.train_input_fn)
+    train_spec = tf.estimator.TrainSpec(input_fn=lambda: input_data.input_fn('train'))
+    eval_spec = tf.estimator.EvalSpec(input_fn=lambda: input_data.input_fn('eval'))
+    tf.estimator.train_and_evaluate(model, train_spec, eval_spec)
 
 
 if __name__ == "__main__":
