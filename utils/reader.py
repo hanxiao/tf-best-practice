@@ -1,4 +1,3 @@
-import itertools
 import json
 
 import dask.bag as db
@@ -61,7 +60,7 @@ class InputData:
             X = d.pluck(0).compute(), d.pluck(1).compute(), d.pluck(2).compute()
 
             def gen():
-                for i in itertools.count(0):
+                for i in range(len(X[0])):
                     yield X[0][i], X[1][i], X[2][i]
 
             self.ds = Dataset.from_generator(generator=gen, output_types=(tf.int32, tf.int32, tf.int32),
