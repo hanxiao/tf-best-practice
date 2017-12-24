@@ -42,12 +42,12 @@ class InputData:
             num_sent = text_stream.count().compute()
             num_room = chatroom_stream.count().compute()
             num_user = user_stream.count().compute()
-            num_char = len(char2int_map)
-            LOGGER.info('unique sentences: %d' % num_sent)
-            LOGGER.info('unique chars: %d' % num_char)
-            LOGGER.info('unique rooms: %d' % num_room)
-            LOGGER.info('unique users: %d' % num_user)
-            LOGGER.info('vocabulary size: %d' % reserved_chars)
+            num_char = len(char2int_map) + 1
+            LOGGER.info('# sentences: %d' % num_sent)
+            LOGGER.info('# chars: %d' % num_char)
+            LOGGER.info('# rooms: %d' % num_room)
+            LOGGER.info('# users: %d' % num_user)
+            LOGGER.info('# symbols: %d' % reserved_chars)
 
         with JobContext('building dataset...', LOGGER):
             d = (
