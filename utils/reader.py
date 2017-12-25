@@ -65,8 +65,8 @@ class InputData:
 
             ds = Dataset.from_generator(generator=gen, output_types=(tf.int32, tf.int32, tf.int32),
                                         output_shapes=([None], [], [])).shuffle(buffer_size=10000)  # type: Dataset
-            self.validate_ds = ds.take(MODEL_PARAM.num_validation)
-            self.train_ds = ds.skip(MODEL_PARAM.num_validation)
+            self.eval_ds = ds.take(MODEL_PARAM.num_eval)
+            self.train_ds = ds.skip(MODEL_PARAM.num_eval)
 
         self.num_char = num_char
         self.num_reserved_char = reserved_chars
@@ -85,7 +85,7 @@ class InputData:
         LOGGER.info('data loading finished!')
 
     def input_fn(self, mode):
-        return ((self.train_ds if mode == 'train' else self.validate_ds)
+        return ((self.train_ds if mode == 'train' else self.eval_ds)
                 .repeat(MODEL_PARAM.num_epoch)  # first do repeat
                 .padded_batch(MODEL_PARAM.batch_size, padded_shapes=([None], [], []))
                 ).make_one_shot_iterator().get_next(), None

@@ -12,11 +12,11 @@ default: &DEFAULT
   optimizer: rmsp
   learning_rate: 1.0e-4
   decay_rate: 0.97
-  test_interval: 1
   loss: logisitc
   len_threshold: 100
   loss_at_each_step: true
-  num_validation: 1000
+  num_eval: 1000
+  eval_step: 1000
 
 large_hidden: &SET1
   <<: *DEFAULT
