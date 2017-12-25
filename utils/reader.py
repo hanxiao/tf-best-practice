@@ -85,7 +85,6 @@ class InputData:
         LOGGER.info('data loading finished!')
 
     def input_fn(self, mode):
-        return ((self.train_ds if mode == 'train' else self.eval_ds)
-                .repeat(MODEL_PARAM.num_epoch)  # first do repeat
+        return ((self.train_ds.repeat(MODEL_PARAM.num_epoch) if mode == 'train' else self.eval_ds)
                 .padded_batch(MODEL_PARAM.batch_size, padded_shapes=([None], [], []))
                 ).make_one_shot_iterator().get_next(), None
