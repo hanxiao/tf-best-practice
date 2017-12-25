@@ -2,6 +2,7 @@ import json
 
 import dask.bag as db
 import tensorflow as tf
+from tensorflow.contrib.learn import ModeKeys
 from tensorflow.python.data import Dataset
 
 from config import APP_CONFIG, LOGGER, MODEL_PARAM
@@ -50,12 +51,10 @@ class InputData:
             LOGGER.info('# symbols: %d' % reserved_chars)
 
         with JobContext('building dataset...', LOGGER):
-            d = (
-                msg_stream.filter(lambda x: len(x['text']) <= MODEL_PARAM.len_threshold).map(
-                    lambda x: (
-                        [char2int_map.get(c, unknown_char_idx) for c in x['text']],
-                        room2int_map.get(x['chatroomName'], unknown_room_idx),
-                        user2int_map.get(x['fromUser'], unknown_user_idx))))
+            d = (msg_stream.map(lambda x: (
+                [char2int_map.get(c, unknown_char_idx) for c in x['text']],
+                room2int_map.get(x['chatroomName'], unknown_room_idx),
+                user2int_map.get(x['fromUser'], unknown_user_idx))))
 
             X = d.pluck(0).compute(), d.pluck(1).compute(), d.pluck(2).compute()
 
@@ -76,6 +75,9 @@ class InputData:
         self.char2int = char2int_map
         self.user2int = user2int_map
         self.room2int = room2int_map
+        self.int2char = {i: c for c, i in char2int_map.items()}
+        self.int2user = {i: c for c, i in user2int_map.items()}
+        self.int2room = {i: c for c, i in room2int_map.items()}
         self.unknown_char_idx = unknown_char_idx
         self.unknown_user_idx = unknown_user_idx
         self.unknown_room_idx = unknown_room_idx
@@ -84,7 +86,15 @@ class InputData:
 
         LOGGER.info('data loading finished!')
 
-    def input_fn(self, mode):
-        return ((self.train_ds.repeat(MODEL_PARAM.num_epoch) if mode == 'train' else self.eval_ds)
-                .padded_batch(MODEL_PARAM.batch_size, padded_shapes=([None], [], []))
-                ).make_one_shot_iterator().get_next(), None
+    def input_fn(self, mode: ModeKeys):
+        return {
+                   ModeKeys.TRAIN:
+                       lambda: self.train_ds.repeat(MODEL_PARAM.num_epoch).padded_batch(MODEL_PARAM.batch_size,
+                                                                                        padded_shapes=([None], [], [])),
+                   ModeKeys.EVAL:
+                       lambda: self.eval_ds.padded_batch(MODEL_PARAM.batch_size, padded_shapes=([None], [], [])),
+                   ModeKeys.INFER: lambda: Dataset.range(1)
+               }[mode]().make_one_shot_iterator().get_next(), None
+
+    def decode(self, predictions):
+        return [''.join([self.int2char[j] for j in x]) for x in predictions]

@@ -17,6 +17,8 @@ default: &DEFAULT
   loss_at_each_step: true
   num_eval: 1000
   eval_step: 1000
+  infer_seq_length: 10
+  infer_batch_size: 100
 
 large_hidden: &SET1
   <<: *DEFAULT

@@ -1,4 +1,5 @@
 import tensorflow as tf
+from tensorflow.contrib.learn import ModeKeys
 from tensorflow.python.ops.distributions.categorical import Categorical
 from tensorflow.python.ops.rnn import _transpose_batch_time
 from tensorflow.python.ops.rnn_cell_impl import LSTMStateTuple, LSTMCell
@@ -7,15 +8,19 @@ from utils.slstm import BasicSLSTMCell
 
 
 def model_fn(features, labels, mode, params, config):
-    X_s, X_r, X_u = features
-
-    cur_batch_B = tf.shape(X_s)[0]
-    cur_batch_T = tf.shape(X_s)[1]
     cur_batch_D = params.num_char
 
-    Xs_embd = tf.one_hot(X_s, cur_batch_D)
-    X_ta = tf.TensorArray(size=cur_batch_T, dtype=tf.float32).unstack(
-        _transpose_batch_time(Xs_embd), 'TBD_Formatted_X')
+    if mode == ModeKeys.TRAIN or mode == ModeKeys.EVAL:
+        X_s, X_r, X_u = features
+        cur_batch_B = tf.shape(X_s)[0]
+        cur_batch_T = tf.shape(X_s)[1]
+
+        Xs_embd = tf.one_hot(X_s, cur_batch_D)
+        X_ta = tf.TensorArray(size=cur_batch_T, dtype=tf.float32).unstack(
+            _transpose_batch_time(Xs_embd), 'TBD_Formatted_X')
+    else:
+        cur_batch_B = params.infer_batch_size
+        cur_batch_T = params.infer_seq_length
 
     acell = {
         'lstm': lambda: LSTMCell(params.num_hidden),
@@ -72,7 +77,7 @@ def model_fn(features, labels, mode, params, config):
                 next_loop_state = output_ta
             else:  # pass the last state to the next
                 next_cell_state = cell_state
-                next_step = X_ta.read(time - 1) if mode == tf.estimator.ModeKeys.TRAIN else get_sample(cell_output)
+                next_step = X_ta.read(time - 1) if mode == ModeKeys.TRAIN else get_sample(cell_output)
                 next_loop_state = loop_state.write(time - 1, next_step)
 
             elements_finished = (time >= cur_batch_T)
@@ -84,20 +89,26 @@ def model_fn(features, labels, mode, params, config):
     with tf.name_scope('Output'):
         outputs = _transpose_batch_time(output_ta.stack())
         logits = get_logits(outputs)
-        X_sampled = _transpose_batch_time(loop_state_ta.stack())
+
+    if mode == ModeKeys.TRAIN or mode == ModeKeys.EVAL:
         logp_loss = -tf.reduce_mean(tf.log(1e-6 + get_prob(outputs, X_s)))
         xentropy_loss = tf.reduce_mean(
             tf.nn.sigmoid_cross_entropy_with_logits(labels=Xs_embd, logits=logits), name='xtropy_loss')
 
-    train_op = tf.train.RMSPropOptimizer(learning_rate=params.learning_rate).minimize(
-        loss=logp_loss, global_step=tf.train.get_global_step())
+        train_op = tf.train.RMSPropOptimizer(learning_rate=params.learning_rate).minimize(
+            loss=logp_loss, global_step=tf.train.get_global_step())
 
-    logging_hook = tf.train.LoggingTensorHook(tensors={"xtropy_loss": "Output/xtropy_loss"},
-                                              every_n_iter=100)
+        logging_hook = tf.train.LoggingTensorHook(tensors={"xtropy_loss": "xtropy_loss"},
+                                                  every_n_iter=100)
 
-    return tf.estimator.EstimatorSpec(
-        mode=mode,
-        predictions=X_sampled,
-        loss=logp_loss,
-        train_op=train_op,
-        training_chief_hooks=[logging_hook])
+        return tf.estimator.EstimatorSpec(
+            mode=mode,
+            loss=logp_loss,
+            train_op=train_op,
+            training_chief_hooks=[logging_hook])
+    else:
+        X_sampled = tf.argmax(_transpose_batch_time(loop_state_ta.stack()), axis=2)
+
+        return tf.estimator.EstimatorSpec(
+            mode=mode,
+            predictions=X_sampled)
