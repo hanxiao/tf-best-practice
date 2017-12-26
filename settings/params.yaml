@@ -20,11 +20,16 @@ default: &DEFAULT
   infer_seq_length: 10
   infer_batch_size: 100
 
-lstm:
+lstm: &LSTM
   <<: *DEFAULT
+  cell: lstm
   len_threshold: 100
   batch_size: 100
   num_hidden: 256
   num_epoch: 100
   infer_seq_length: 50
   num_eval: 0
+
+sru:
+  <<: *LSTM
+  cell: sru
