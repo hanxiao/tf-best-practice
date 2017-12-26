@@ -15,7 +15,7 @@ class YParams(HParams):
                 self.add_hparam(k, v)
 
 
-class ModelParameter(YParams):
+class ModelParams(YParams):
     pass
 
 
@@ -26,5 +26,4 @@ class AppConfig(YParams):
         self.log_dir = self.work_dir + self.log_dir
         self.script_dir = self.work_dir + self.script_dir
         self.log_path = self.log_dir + os.getenv('APPNAME', 'app') + datetime.now().strftime("%m%d-%H%M") + '.log'
-        self.model_parameter = ModelParameter(self.parameter_file, self.parameter_profile)
         self.logger = get_logger(__name__, self.log_path, self.log_format)

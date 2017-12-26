@@ -5,18 +5,21 @@ import tensorflow as tf
 from tensorflow.contrib.learn import ModeKeys
 from tensorflow.python.data import Dataset
 
-from config import APP_CONFIG, LOGGER, MODEL_PARAM
+from utils.parameter import AppConfig
 from .logger import JobContext
 
 
 class InputData:
-    def __init__(self):
-        LOGGER.info('maximum length of training sent: %d' % MODEL_PARAM.len_threshold)
+    def __init__(self, config: AppConfig):
+        params = config.model_parameter
+        logger = config.logger
 
-        with JobContext('indexing all chars/chatrooms/users...', LOGGER):
-            b = db.read_text(APP_CONFIG.data_file).map(json.loads)
+        logger.info('maximum length of training sent: %d' % params.len_threshold)
+
+        with JobContext('indexing all chars/chatrooms/users...', logger):
+            b = db.read_text(config.data_file).map(json.loads)
             msg_stream = b.filter(lambda x: x['msgType'] == 'Text').filter(
-                lambda x: len(x['text']) <= MODEL_PARAM.len_threshold)
+                lambda x: len(x['text']) <= params.len_threshold)
             text_stream = msg_stream.pluck('text').distinct()
             chatroom_stream = msg_stream.pluck('chatroomName').distinct()
             user_stream = msg_stream.pluck('fromUser').distinct()
@@ -39,18 +42,18 @@ class InputData:
 
             reserved_chars += len(user2int_map)
 
-        with JobContext('computing some statistics...', LOGGER):
+        with JobContext('computing some statistics...', logger):
             num_sent = text_stream.count().compute()
             num_room = chatroom_stream.count().compute()
             num_user = user_stream.count().compute()
             num_char = len(char2int_map) + 1
-            LOGGER.info('# sentences: %d' % num_sent)
-            LOGGER.info('# chars: %d' % num_char)
-            LOGGER.info('# rooms: %d' % num_room)
-            LOGGER.info('# users: %d' % num_user)
-            LOGGER.info('# symbols: %d' % reserved_chars)
+            logger.info('# sentences: %d' % num_sent)
+            logger.info('# chars: %d' % num_char)
+            logger.info('# rooms: %d' % num_room)
+            logger.info('# users: %d' % num_user)
+            logger.info('# symbols: %d' % reserved_chars)
 
-        with JobContext('building dataset...', LOGGER):
+        with JobContext('building dataset...', logger):
             d = (msg_stream.map(lambda x: (
                 [char2int_map.get(c, unknown_char_idx) for c in x['text']],
                 room2int_map.get(x['chatroomName'], unknown_room_idx),
@@ -64,8 +67,8 @@ class InputData:
 
             ds = Dataset.from_generator(generator=gen, output_types=(tf.int32, tf.int32, tf.int32, tf.int32),
                                         output_shapes=([None], [], [], [])).shuffle(buffer_size=10000)  # type: Dataset
-            self.eval_ds = ds.take(MODEL_PARAM.num_eval)
-            self.train_ds = ds.skip(MODEL_PARAM.num_eval)
+            self.eval_ds = ds.take(params.num_eval)
+            self.train_ds = ds.skip(params.num_eval)
 
         self.num_char = num_char
         self.num_reserved_char = reserved_chars
@@ -82,18 +85,19 @@ class InputData:
         self.unknown_user_idx = unknown_user_idx
         self.unknown_room_idx = unknown_room_idx
 
-        MODEL_PARAM.add_hparam('num_char', num_char)
+        params.add_hparam('num_char', num_char)
+        self.params = params
 
-        LOGGER.info('data loading finished!')
+        logger.info('data loading finished!')
 
     def input_fn(self, mode: ModeKeys):
         return {
                    ModeKeys.TRAIN:
-                       lambda: self.train_ds.repeat(MODEL_PARAM.num_epoch).padded_batch(MODEL_PARAM.batch_size,
+                       lambda: self.train_ds.repeat(self.params.num_epoch).padded_batch(self.params.batch_size,
                                                                                         padded_shapes=(
                                                                                             [None], [], [], [])),
                    ModeKeys.EVAL:
-                       lambda: self.eval_ds.padded_batch(MODEL_PARAM.batch_size, padded_shapes=([None], [], [], [])),
+                       lambda: self.eval_ds.padded_batch(self.params.batch_size, padded_shapes=([None], [], [], [])),
                    ModeKeys.INFER: lambda: Dataset.range(1)
                }[mode]().make_one_shot_iterator().get_next(), None
 

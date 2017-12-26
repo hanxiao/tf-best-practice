@@ -5,20 +5,9 @@ default: &DEFAULT
   log_dir: log/
   script_dir: script/
   data_file: data/*/db.json.2017-*-*.gz
-  parameter_file: settings/parameter.yaml
-  parameter_profile: default
   log_format: '%(asctime)s:%(filename)s:%(funcName)s:[%(levelname)s] %(message)s'
-
-remote:
-  <<: *DEFAULT
-  work_dir: /opt/workspace/
-  parameter_profile: development
-
-debug:
-  <<: *DEFAULT
-  parameter_profile: debug
 
 aws:
   <<: *DEFAULT
   work_dir: /
-  parameter_profile: debug
+  parameter_profile: lstm

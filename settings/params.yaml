@@ -1,30 +1,26 @@
 # YAML settings for the model parameters
 default: &DEFAULT
-  batch_size: 100
+  batch_size: 10
   split_ratio: 0.6
   train_embedding: true
   cell: sru
   init_state_type: var
   dilation: [1, 2, 4, 8, 16, 32]
-  num_hidden: 128
+  num_hidden: 10
   metric: cosine
   num_epoch: 1000
   optimizer: rmsp
   learning_rate: 1.0e-4
   decay_rate: 0.97
   loss: logisitc
-  len_threshold: 100
+  len_threshold: 10
   loss_at_each_step: true
   num_eval: 1000
   eval_step: 1000
   infer_seq_length: 10
   infer_batch_size: 100
 
-large_hidden: &SET1
-  <<: *DEFAULT
-  num_hidden: 1024
-
-debug:
+lstm:
   <<: *DEFAULT
   len_threshold: 100
   batch_size: 100
