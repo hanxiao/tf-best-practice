@@ -30,3 +30,4 @@ debug:
   batch_size: 100
   num_hidden: 256
   num_epoch: 100
+  infer_seq_length: 50
