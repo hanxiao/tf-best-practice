@@ -27,6 +27,6 @@ large_hidden: &SET1
 debug:
   <<: *SET1
   len_threshold: 10
-  batch_size: 10
-  num_hidden: 10
-  num_epoch: 1
+  batch_size: 100
+  num_hidden: 100
+  num_epoch: 10

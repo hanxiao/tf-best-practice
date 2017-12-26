@@ -60,10 +60,10 @@ class InputData:
 
             def gen():
                 for i in range(len(X[0])):
-                    yield X[0][i], X[1][i], X[2][i]
+                    yield X[0][i], len(X[0][i]), X[1][i], X[2][i]
 
-            ds = Dataset.from_generator(generator=gen, output_types=(tf.int32, tf.int32, tf.int32),
-                                        output_shapes=([None], [], [])).shuffle(buffer_size=10000)  # type: Dataset
+            ds = Dataset.from_generator(generator=gen, output_types=(tf.int32, tf.int32, tf.int32, tf.int32),
+                                        output_shapes=([None], [], [], [])).shuffle(buffer_size=10000)  # type: Dataset
             self.eval_ds = ds.take(MODEL_PARAM.num_eval)
             self.train_ds = ds.skip(MODEL_PARAM.num_eval)
 
@@ -90,11 +90,21 @@ class InputData:
         return {
                    ModeKeys.TRAIN:
                        lambda: self.train_ds.repeat(MODEL_PARAM.num_epoch).padded_batch(MODEL_PARAM.batch_size,
-                                                                                        padded_shapes=([None], [], [])),
+                                                                                        padded_shapes=(
+                                                                                            [None], [], [], [])),
                    ModeKeys.EVAL:
-                       lambda: self.eval_ds.padded_batch(MODEL_PARAM.batch_size, padded_shapes=([None], [], [])),
+                       lambda: self.eval_ds.padded_batch(MODEL_PARAM.batch_size, padded_shapes=([None], [], [], [])),
                    ModeKeys.INFER: lambda: Dataset.range(1)
                }[mode]().make_one_shot_iterator().get_next(), None
 
     def decode(self, predictions):
-        return [''.join([self.int2char[j] for j in x]) for x in predictions]
+        results = []
+        for p in predictions:
+            r = []
+            for j in p:
+                if j == 0:
+                    break
+                else:
+                    r.append(self.int2char[j])
+            results.append(''.join(r))
+        return results

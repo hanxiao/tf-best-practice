@@ -11,7 +11,7 @@ def model_fn(features, labels, mode, params, config):
     cur_batch_D = params.num_char
 
     if mode == ModeKeys.TRAIN or mode == ModeKeys.EVAL:
-        X_s, X_r, X_u = features
+        X_s, X_l, X_r, X_u = features
         cur_batch_B = tf.shape(X_s)[0]
         cur_batch_T = tf.shape(X_s)[1]
 
@@ -77,10 +77,16 @@ def model_fn(features, labels, mode, params, config):
                 next_loop_state = output_ta
             else:  # pass the last state to the next
                 next_cell_state = cell_state
-                next_step = X_ta.read(time - 1) if mode == ModeKeys.TRAIN else get_sample(cell_output)
+                if mode == ModeKeys.TRAIN or mode == ModeKeys.EVAL:
+                    next_step = X_ta.read(time - 1)
+                else:
+                    next_step = get_sample(cell_output)
                 next_loop_state = loop_state.write(time - 1, next_step)
 
-            elements_finished = (time >= cur_batch_T)
+            if mode == ModeKeys.TRAIN or mode == ModeKeys.EVAL:
+                elements_finished = (time >= X_l)
+            else:
+                elements_finished = (time >= cur_batch_T)
 
             return elements_finished, next_step, next_cell_state, emit_output, next_loop_state
 
