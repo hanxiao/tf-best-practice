@@ -5,13 +5,12 @@ import tensorflow as tf
 from tensorflow.contrib.learn import ModeKeys
 from tensorflow.python.data import Dataset
 
-from utils.parameter import AppConfig
+from utils.parameter import AppConfig, ModelParams
 from .logger import JobContext
 
 
 class InputData:
-    def __init__(self, config: AppConfig):
-        params = config.model_parameter
+    def __init__(self, config: AppConfig, params: ModelParams):
         logger = config.logger
 
         logger.info('maximum length of training sent: %d' % params.len_threshold)
