@@ -22,7 +22,7 @@ SenzaInfo:
         Default: query2fdna-save
     - SlaveArguments:
         Description: "The arguments to pass to the slave RNN model."
-        Default: --metric=cosine --loss=logistic
+        Default: aws lstm
 
 # a list of senza components to apply to the definition
 SenzaComponents:
