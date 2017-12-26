@@ -18,3 +18,7 @@ debug:
   <<: *DEFAULT
   parameter_profile: debug
 
+aws:
+  <<: *DEFAULT
+  work_dir: /
+  parameter_profile: debug
