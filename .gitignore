@@ -113,3 +113,4 @@ test.yaml
 /.idea/
 *.iml
 test*.py
+senza.yaml
