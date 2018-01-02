@@ -4,7 +4,7 @@ from tensorflow.python.ops.distributions.categorical import Categorical
 from tensorflow.python.ops.rnn import _transpose_batch_time
 from tensorflow.python.ops.rnn_cell_impl import LSTMStateTuple, LSTMCell
 
-from utils.slstm import BasicSLSTMCell
+from utils.sru import SRUCell
 
 
 def model_fn(features, labels, mode, params, config):
@@ -24,7 +24,7 @@ def model_fn(features, labels, mode, params, config):
 
     acell = {
         'lstm': lambda: LSTMCell(params.num_hidden),
-        'sru': lambda: BasicSLSTMCell(params.num_hidden)
+        'sru': lambda: SRUCell(params.num_hidden)
     }[params.cell]()
 
     output_layer_info = {
