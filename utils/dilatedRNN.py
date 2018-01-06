@@ -2,15 +2,11 @@ import copy
 
 import tensorflow as tf
 
-from config import LOGGER
-
 
 def dRNN(cell, inputs, rate, init_state, scope='default'):
     n_steps = len(inputs)
     if rate < 0 or rate >= n_steps:
         raise ValueError('The \'rate\' variable needs to be adjusted.')
-    LOGGER.info("Building layer: %s, input length: %d, dilation rate: %d, input dim: %d." % (
-        scope, n_steps, rate, inputs[0].get_shape()[1]))
 
     # make the length of inputs divide 'rate', by using zero-padding
     if n_steps % rate:
@@ -18,15 +14,11 @@ def dRNN(cell, inputs, rate, init_state, scope='default'):
         # This is used for zero padding
         zero_tensor = tf.zeros_like(inputs[0])
         dilated_n_steps = n_steps // rate + 1
-        LOGGER.info("%d time points need to be padded. " % (
-            dilated_n_steps * rate - n_steps))
 
         for _ in range(dilated_n_steps * rate - n_steps):
             inputs.append(zero_tensor)
     else:
         dilated_n_steps = n_steps // rate
-
-    LOGGER.info("input length for sub-RNN: %d" % dilated_n_steps)
 
     dilated_inputs = [tf.concat(inputs[i * rate:(i + 1) * rate],
                                 axis=0) for i in range(dilated_n_steps)]
