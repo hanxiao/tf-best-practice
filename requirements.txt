@@ -1,4 +1,4 @@
 numpy>=1.12.1
-tensorflow-gpu>=1.4.0
+tensorflow>=1.4.0
 ruamel.yaml<=0.15
-dask >= 0.16.0
+dask[complete]>= 0.16.0
