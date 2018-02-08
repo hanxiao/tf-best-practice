@@ -10,5 +10,5 @@ default: &DEFAULT
 aws:
   <<: *DEFAULT
   work_dir: ./
-  all_langs: {'python': 'py', 'bash':'sh', 'javascript': 'js', 'html': 'html'}
+  all_langs: {'python': 'py'}
   parameter_profile: lstm
