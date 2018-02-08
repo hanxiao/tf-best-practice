@@ -1,13 +1,14 @@
 # YAML settings for the app
 default: &DEFAULT
   work_dir: /Users/hxiao/Documents/tf-best-practice/
-  data_dir: '../query2fdna-learner/**/'
+  data_dir: './**/'
   log_dir: log/
   script_dir: script/
-  all_langs: {'python': 'py', 'bash':'sh', 'javascript': 'js', 'html': 'html'}
+  all_langs: {'python': 'py'}
   log_format: '%(asctime)s:%(filename)s:%(funcName)s:[%(levelname)s] %(message)s'
 
 aws:
   <<: *DEFAULT
   work_dir: /
+  all_langs: {'python': 'py', 'bash':'sh', 'javascript': 'js', 'html': 'html'}
   parameter_profile: lstm
