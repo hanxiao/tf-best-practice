@@ -58,7 +58,7 @@ class InputData:
                                   lang2int_map.get(lang, unknown_lang_idx)
             self.output_shapes = ([None], [], [])
             ds = Dataset.from_generator(generator=gen, output_types=(tf.int32, tf.int32, tf.int32),
-                                        output_shapes=self.output_shapes).shuffle(buffer_size=1000)  # type: Dataset
+                                        output_shapes=self.output_shapes).shuffle(buffer_size=50000)  # type: Dataset
             self.eval_ds = ds.take(params.num_eval)
             self.train_ds = ds.skip(params.num_eval)
 
