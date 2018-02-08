@@ -1,4 +1,4 @@
-FROM tensorflow/tensorflow:1.5-gpu-py3
+FROM tensorflow/tensorflow:1.5.0-gpu-py3
 
 MAINTAINER artex.xh@gmail.com
 
@@ -9,7 +9,7 @@ ENV LC_ALL C.UTF-8
 ENV LANG C.UTF-8
 
 RUN apt-get -y update && \
-    apt-get -y install awscli cowsay nano && \
+    apt-get -y install nano && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
@@ -19,5 +19,3 @@ RUN pip install --no-cache-dir -r /requirements.txt
 RUN pip install dask[complete]
 
 ADD . /
-
-ENTRYPOINT python ./app.py $ARGUMENTS

@@ -1,7 +1,6 @@
 log/*
 doc/*
 save/*
-Dockerfile
 README.md
 senza.yaml
 test.yaml
