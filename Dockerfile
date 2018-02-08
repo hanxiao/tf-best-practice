@@ -1,6 +1,6 @@
-FROM tensorflow/tensorflow:1.4.1-gpu-py3
+FROM tensorflow/tensorflow:1.5-gpu-py3
 
-MAINTAINER han.xiao@zalando.de
+MAINTAINER artex.xh@gmail.com
 
 WORKDIR /
 
