@@ -11,7 +11,7 @@ def model_fn(features, labels, mode, params, config):
     cur_batch_D = params.num_char
 
     if mode == ModeKeys.TRAIN or mode == ModeKeys.EVAL:
-        X_s, X_l, X_r, X_u = features
+        X_s, X_l, X_r = features
         cur_batch_B = tf.shape(X_s)[0]
         cur_batch_T = tf.shape(X_s)[1]
 
@@ -61,7 +61,10 @@ def model_fn(features, labels, mode, params, config):
         c_init = tf.tile(tf.get_variable('init_state_c', [1, params.num_hidden],
                                          initializer=tf.random_uniform_initializer(0)),
                          [cur_batch_B, 1])
-        cell_init_state = LSTMStateTuple(c_init, h_init)
+        cell_init_state = {
+            'lstm': lambda: LSTMStateTuple(c_init, h_init),
+            'sru': lambda: h_init
+        }[params.cell]()
 
         first_step = tf.zeros(shape=[cur_batch_B, cur_batch_D], dtype=tf.float32, name='first_character')
 

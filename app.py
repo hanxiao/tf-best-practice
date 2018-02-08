@@ -1,4 +1,5 @@
 import itertools
+from glob import glob
 
 import tensorflow as tf
 from tensorflow.contrib.learn import ModeKeys
