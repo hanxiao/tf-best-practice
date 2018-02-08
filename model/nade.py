@@ -4,9 +4,6 @@ from tensorflow.python.ops.distributions.categorical import Categorical
 from tensorflow.python.ops.rnn import _transpose_batch_time
 from tensorflow.python.ops.rnn_cell_impl import LSTMStateTuple, LSTMCell
 
-from utils.sru import SRUCell
-
-
 def model_fn(features, labels, mode, params, config):
     cur_batch_D = params.num_char
 
