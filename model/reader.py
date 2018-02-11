@@ -1,8 +1,9 @@
-import dask.bag as db
 import re
-import tensorflow as tf
 from glob import glob
 from string import punctuation
+
+import dask.bag as db
+import tensorflow as tf
 from tensorflow.contrib.learn import ModeKeys
 from tensorflow.python.data import Dataset
 
@@ -17,6 +18,7 @@ class InputData:
         logger.info('maximum length of training sent: %d' % params.len_threshold)
 
         self.pattern = re.compile(r'(\s+|[{}])'.format(re.escape(punctuation)))
+        self.char_based = params.char_based
 
         with JobContext('indexing all codes...', logger):
             b = db.read_text([config.data_dir + '*.' + v for v in config.all_langs.values()])
@@ -103,4 +105,4 @@ class InputData:
         return results
 
     def tokenize(self, line):
-        return [p for p in self.pattern.split(line) if p]
+        return [p for p in self.pattern.split(line) if p] if not self.char_based else line

@@ -20,6 +20,7 @@ default: &DEFAULT
   infer_seq_length: 100
   infer_batch_size: 10
   dim_embed: 16
+  char_based: true
 
 lstm: &LSTM
   <<: *DEFAULT
