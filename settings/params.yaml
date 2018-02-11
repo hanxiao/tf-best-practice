@@ -13,9 +13,9 @@ default: &DEFAULT
   learning_rate: 1.0e-4
   decay_rate: 0.97
   loss: logisitc
-  len_threshold: 100
+  len_threshold: 200
   loss_at_each_step: true
-  num_eval: 1000
+  num_eval: 100
   eval_step: 1000
   infer_seq_length: 100
   infer_batch_size: 10
@@ -26,6 +26,7 @@ lstm: &LSTM
   cell: lstm
   len_threshold: 100
   batch_size: 100
+  num_eval: 1000
   num_hidden: 256
   num_epoch: 100
   infer_seq_length: 100

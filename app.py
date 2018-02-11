@@ -16,7 +16,7 @@ def main(argv):
     input_data = InputData(config, params)
     model = tf.estimator.Estimator(model_fn=nade.model_fn, params=params)
     while True:
-        model.train(input_fn=lambda: input_data.input_fn(ModeKeys.TRAIN), steps=100)
+        model.train(input_fn=lambda: input_data.input_fn(ModeKeys.TRAIN), steps=1000)
         results_gen = model.predict(input_fn=lambda: input_data.input_fn(ModeKeys.INFER))
         config.logger.info(input_data.decode(list(itertools.islice(results_gen, params.infer_batch_size))))
         # train_spec = tf.estimator.TrainSpec(input_fn=lambda: input_data.input_fn(ModeKeys.TRAIN))

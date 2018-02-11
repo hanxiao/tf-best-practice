@@ -11,4 +11,3 @@ aws:
   <<: *DEFAULT
   work_dir: ./
   all_langs: {'python': 'py'}
-  parameter_profile: lstm

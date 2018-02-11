@@ -57,11 +57,8 @@ def model_fn(features, labels, mode, params, config):
                            allow_nan_stats=False,
                            dtype=tf.int32)
 
-    def get_sample(cell_out):
-        return tf.one_hot(get_dist(cell_out).sample(), params.num_char)
-
     def get_prob(cell_out, obs):
-        # the observation is in
+        # get_dist output is BxNUM_CHAR
         return get_dist(cell_out).prob(obs)
 
     with tf.variable_scope('Initial_State'):
@@ -79,7 +76,10 @@ def model_fn(features, labels, mode, params, config):
         first_step = tf.zeros(shape=[cur_batch_B, cur_batch_D], dtype=tf.float32, name='first_character')
 
     with tf.name_scope('NADE'):
-        output_ta = tf.TensorArray(size=cur_batch_T, dtype=tf.float32)
+        if mode == ModeKeys.TRAIN or mode == ModeKeys.EVAL:
+            output_ta = tf.TensorArray(size=cur_batch_T, dtype=tf.float32)
+        else:
+            output_ta = tf.TensorArray(size=cur_batch_T, dtype=tf.int32)
 
         def loop_fn(time, cell_output, cell_state, loop_state):
             emit_output = cell_output  # == None for time == 0
@@ -92,10 +92,11 @@ def model_fn(features, labels, mode, params, config):
                 next_cell_state = cell_state
                 if mode == ModeKeys.TRAIN or mode == ModeKeys.EVAL:
                     next_step = X_ta.read(time - 1)
+                    next_loop_state = loop_state.write(time - 1, next_step)
                 else:
                     next_symbol = get_dist(cell_output).sample()
                     next_step = tf.nn.embedding_lookup(char_embd, next_symbol)
-                next_loop_state = loop_state.write(time - 1, next_step)
+                    next_loop_state = loop_state.write(time - 1, next_symbol)
 
             if mode == ModeKeys.TRAIN or mode == ModeKeys.EVAL:
                 elements_finished = (time >= X_l)
@@ -104,10 +105,10 @@ def model_fn(features, labels, mode, params, config):
 
             return elements_finished, next_step, next_cell_state, emit_output, next_loop_state
 
-        output_ta, _, loop_state_ta = tf.nn.raw_rnn(acell, loop_fn)
+        decoder_emit_ta, _, loop_state_ta = tf.nn.raw_rnn(acell, loop_fn)
 
     with tf.name_scope('Output'):
-        outputs = _transpose_batch_time(output_ta.stack())
+        outputs = _transpose_batch_time(decoder_emit_ta.stack())
         logits = get_logits(outputs)
 
     if mode == ModeKeys.TRAIN or mode == ModeKeys.EVAL:
@@ -128,7 +129,7 @@ def model_fn(features, labels, mode, params, config):
             train_op=train_op,
             training_chief_hooks=[logging_hook])
     else:
-        X_sampled = tf.argmax(_transpose_batch_time(loop_state_ta.stack()), axis=2)
+        X_sampled = _transpose_batch_time(loop_state_ta.stack())
 
         return tf.estimator.EstimatorSpec(
             mode=mode,

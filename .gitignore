@@ -112,5 +112,5 @@ tunnel-*.sh
 test.yaml
 /.idea/
 *.iml
-test*.py
+run.py
 senza.yaml
