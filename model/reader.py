@@ -1,9 +1,8 @@
+import dask.bag as db
 import re
+import tensorflow as tf
 from glob import glob
 from string import punctuation
-
-import dask.bag as db
-import tensorflow as tf
 from tensorflow.contrib.learn import ModeKeys
 from tensorflow.python.data import Dataset
 
@@ -61,7 +60,7 @@ class InputData:
 
             self.output_shapes = ([None], [], [])
             ds = Dataset.from_generator(generator=gen, output_types=(tf.int32, tf.int32, tf.int32),
-                                        output_shapes=self.output_shapes).shuffle(buffer_size=1000)  # type: Dataset
+                                        output_shapes=self.output_shapes).shuffle(buffer_size=10000)  # type: Dataset
             self.eval_ds = ds.take(params.num_eval)
             self.train_ds = ds.skip(params.num_eval)
 
