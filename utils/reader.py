@@ -1,3 +1,4 @@
+import re
 from glob import glob
 
 import dask.bag as db
@@ -18,7 +19,8 @@ class InputData:
         with JobContext('indexing all codes...', logger):
             b = db.read_text([config.data_dir + '*.' + v for v in config.all_langs.values()])
 
-            all_chars = b.flatten().distinct().filter(lambda x: x).compute()
+            all_chars = b.map(lambda x: re.findall(r"[\w]+|[^\s\w]", x)).flatten().distinct().filter(
+                lambda x: x).compute()
             unknown_char_idx = 0
             reserved_chars = 1
             char2int_map = {c: idx + reserved_chars for idx, c in enumerate(all_chars)}
