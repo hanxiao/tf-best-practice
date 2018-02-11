@@ -4,8 +4,8 @@ import tensorflow as tf
 from tensorflow.contrib.learn import ModeKeys
 
 from model import nade
+from model.reader import InputData
 from utils.parameter import AppConfig, ModelParams
-from utils.reader import InputData
 
 tf.logging.set_verbosity(tf.logging.INFO)
 

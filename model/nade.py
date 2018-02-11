@@ -1,4 +1,3 @@
-import numpy as np
 import tensorflow as tf
 from tensorflow.contrib.learn import ModeKeys
 from tensorflow.python.ops.distributions.categorical import Categorical
@@ -11,21 +10,31 @@ from utils.sru import SRUCell
 def model_fn(features, labels, mode, params, config):
     cur_batch_D = params.dim_embed
 
-    char_embd = tf.Variable(np.random.rand(params.num_char, params.dim_embed),
-                            trainable=True,
-                            dtype=tf.float32,
-                            name='char_ebd')
+    char_embd = tf.get_variable('char_ebd',
+                                [params.num_char, params.dim_embed],
+                                initializer=tf.random_uniform_initializer(0))
+
+    hinit_embed = tf.get_variable('hinit_ebd',
+                                  [params.num_lang, params.num_hidden],
+                                  initializer=tf.random_uniform_initializer(0))
+
+    cinit_embed = tf.get_variable('cinit_ebd',
+                                  [params.num_lang, params.num_hidden],
+                                  initializer=tf.random_uniform_initializer(0))
+
+    first_embed = tf.get_variable('first_ebd',
+                                  [params.num_lang, cur_batch_D],
+                                  initializer=tf.random_uniform_initializer(0))
 
     if mode == ModeKeys.TRAIN or mode == ModeKeys.EVAL:
         X_s, X_l, X_r = features
-        cur_batch_B = tf.shape(X_s)[0]
         cur_batch_T = tf.shape(X_s)[1]
 
         Xs_embd = tf.nn.embedding_lookup(char_embd, X_s, name='ebd_query_seq')
         X_ta = tf.TensorArray(size=cur_batch_T, dtype=tf.float32).unstack(
             _transpose_batch_time(Xs_embd), 'TBD_Formatted_X')
     else:
-        cur_batch_B = params.infer_batch_size
+        X_r = [1] * params.infer_batch_size
         cur_batch_T = params.infer_seq_length
 
     acell = {
@@ -62,18 +71,14 @@ def model_fn(features, labels, mode, params, config):
         return get_dist(cell_out).prob(obs)
 
     with tf.variable_scope('Initial_State'):
-        h_init = tf.tile(tf.get_variable('init_state_h', [1, params.num_hidden],
-                                         initializer=tf.random_uniform_initializer(0)),
-                         [cur_batch_B, 1])
-        c_init = tf.tile(tf.get_variable('init_state_c', [1, params.num_hidden],
-                                         initializer=tf.random_uniform_initializer(0)),
-                         [cur_batch_B, 1])
+        h_init = tf.nn.embedding_lookup(hinit_embed, X_r)
+        c_init = tf.nn.embedding_lookup(cinit_embed, X_r)
         cell_init_state = {
             'lstm': lambda: LSTMStateTuple(c_init, h_init),
             'sru': lambda: h_init
         }[params.cell]()
 
-        first_step = tf.zeros(shape=[cur_batch_B, cur_batch_D], dtype=tf.float32, name='first_character')
+        first_step = tf.nn.embedding_lookup(first_embed, X_r)
 
     with tf.name_scope('NADE'):
         if mode == ModeKeys.TRAIN or mode == ModeKeys.EVAL:

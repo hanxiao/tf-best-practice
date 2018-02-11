@@ -7,8 +7,8 @@ import tensorflow as tf
 from tensorflow.contrib.learn import ModeKeys
 from tensorflow.python.data import Dataset
 
+from utils.logger import JobContext
 from utils.parameter import AppConfig, ModelParams
-from .logger import JobContext
 
 
 class InputData:
@@ -25,22 +25,18 @@ class InputData:
             all_chars = b.map(lambda x: self.tokenize(x)).flatten().distinct().filter(
                 lambda x: x).compute()
             unknown_char_idx = 0
-            reserved_chars = 1
-            char2int_map = {c: idx + reserved_chars for idx, c in enumerate(all_chars)}
+            char2int_map = {c: idx for idx, c in enumerate(all_chars, start=1)}
 
-            unknown_lang_idx = len(char2int_map)
-            reserved_chars += len(char2int_map) + 1
-            lang2int_map = {c: idx + reserved_chars for idx, c in enumerate(config.all_langs.values())}
-            reserved_chars += len(lang2int_map)
+            unknown_lang_idx = 0
+            lang2int_map = {c: idx for idx, c in enumerate(config.all_langs.values(), start=1)}
 
         with JobContext('computing some statistics...', logger):
             num_line = b.count().compute()
             num_char = len(char2int_map) + 1
-            num_lang = len(config.all_langs)
-            logger.info('# sentences: %d' % num_line)
+            num_lang = len(config.all_langs) + 1
+            logger.info('# lines: %d' % num_line)
             logger.info('# chars: %d' % num_char)
             logger.info('# langs: %d' % num_lang)
-            logger.info('# symbols: %d' % reserved_chars)
 
         with JobContext('building data generator...', logger):
             def gen():
@@ -70,9 +66,8 @@ class InputData:
             self.train_ds = ds.skip(params.num_eval)
 
         self.num_char = num_char
-        self.num_reserved_char = reserved_chars
         self.num_line = num_line
-        self.num_room = num_lang
+        self.num_lang = num_lang
         self.char2int = char2int_map
         self.lang2int = lang2int_map
         self.int2char = {i: c for c, i in char2int_map.items()}
@@ -81,6 +76,7 @@ class InputData:
         self.unknown_lang_idx = unknown_lang_idx
 
         params.add_hparam('num_char', num_char)
+        params.add_hparam('num_lang', num_lang)
         self.params = params
 
         logger.info('data loading finished!')
