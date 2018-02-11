@@ -25,13 +25,13 @@ default: &DEFAULT
 lstm: &LSTM
   <<: *DEFAULT
   cell: lstm
-  len_threshold: 100
-  batch_size: 512
+  len_threshold: 200
+  batch_size: 128
   num_eval: 1000
-  dim_embed: 128
+  dim_embed: 64
   num_hidden: 128
   num_epoch: 100
-  infer_seq_length: 100
+  infer_seq_length: 200
   num_eval: 1000
 
 sru:
