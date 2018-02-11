@@ -1,18 +1,27 @@
+import numpy as np
 import tensorflow as tf
 from tensorflow.contrib.learn import ModeKeys
 from tensorflow.python.ops.distributions.categorical import Categorical
 from tensorflow.python.ops.rnn import _transpose_batch_time
 from tensorflow.python.ops.rnn_cell_impl import LSTMStateTuple, LSTMCell
 
+from utils.sru import SRUCell
+
+
 def model_fn(features, labels, mode, params, config):
-    cur_batch_D = params.num_char
+    cur_batch_D = params.dim_embed
+
+    char_embd = tf.Variable(np.random.rand(params.num_char, params.dim_embed),
+                            trainable=True,
+                            dtype=tf.float32,
+                            name='char_ebd')
 
     if mode == ModeKeys.TRAIN or mode == ModeKeys.EVAL:
         X_s, X_l, X_r = features
         cur_batch_B = tf.shape(X_s)[0]
         cur_batch_T = tf.shape(X_s)[1]
 
-        Xs_embd = tf.one_hot(X_s, cur_batch_D)
+        Xs_embd = tf.nn.embedding_lookup(char_embd, X_s, name='ebd_query_seq')
         X_ta = tf.TensorArray(size=cur_batch_T, dtype=tf.float32).unstack(
             _transpose_batch_time(Xs_embd), 'TBD_Formatted_X')
     else:
@@ -25,7 +34,7 @@ def model_fn(features, labels, mode, params, config):
     }[params.cell]()
 
     output_layer_info = {
-        'units': cur_batch_D,  # this is the size of vocabulary
+        'units': params.num_char,  # this is the size of vocabulary
         'name': 'out_to_character',
         # linear 'activation': tf.nn.softmax
     }
@@ -36,16 +45,20 @@ def model_fn(features, labels, mode, params, config):
         tf.layers.dense(zeros_placeholder, **output_layer_info)
 
     def get_logits(cell_out):
-        # useful when measuring the cross-entropy loss
+        # cell_out should be BxH
+        # dense layer is HxNUM_CHAR
+        # logit output is BxNUM_CHAR
         with tf.variable_scope(dense_layer_scope, reuse=True):
             return tf.layers.dense(cell_out, **output_layer_info)
 
     def get_dist(cell_out):
-        return Categorical(logits=get_logits(cell_out), name='categorical_dist', allow_nan_stats=False,
+        return Categorical(logits=get_logits(cell_out),
+                           name='categorical_dist',
+                           allow_nan_stats=False,
                            dtype=tf.int32)
 
     def get_sample(cell_out):
-        return tf.one_hot(get_dist(cell_out).sample(), cur_batch_D)
+        return tf.one_hot(get_dist(cell_out).sample(), params.num_char)
 
     def get_prob(cell_out, obs):
         # the observation is in
@@ -80,7 +93,8 @@ def model_fn(features, labels, mode, params, config):
                 if mode == ModeKeys.TRAIN or mode == ModeKeys.EVAL:
                     next_step = X_ta.read(time - 1)
                 else:
-                    next_step = get_sample(cell_output)
+                    next_symbol = get_dist(cell_output).sample()
+                    next_step = tf.nn.embedding_lookup(char_embd, next_symbol)
                 next_loop_state = loop_state.write(time - 1, next_step)
 
             if mode == ModeKeys.TRAIN or mode == ModeKeys.EVAL:
@@ -99,7 +113,8 @@ def model_fn(features, labels, mode, params, config):
     if mode == ModeKeys.TRAIN or mode == ModeKeys.EVAL:
         logp_loss = -tf.reduce_mean(tf.log(1e-6 + get_prob(outputs, X_s)))
         xentropy_loss = tf.reduce_mean(
-            tf.nn.sigmoid_cross_entropy_with_logits(labels=Xs_embd, logits=logits), name='xtropy_loss')
+            tf.nn.sigmoid_cross_entropy_with_logits(labels=tf.one_hot(X_s, params.num_char),
+                                                    logits=logits), name='xtropy_loss')
 
         train_op = tf.train.RMSPropOptimizer(learning_rate=params.learning_rate).minimize(
             loss=logp_loss, global_step=tf.train.get_global_step())
