@@ -118,21 +118,13 @@ def model_fn(features, labels, mode, params, config):
 
     if mode == ModeKeys.TRAIN or mode == ModeKeys.EVAL:
         logp_loss = -tf.reduce_mean(tf.log(1e-6 + get_prob(outputs, X_s)))
-        xentropy_loss = tf.reduce_mean(
-            tf.nn.sigmoid_cross_entropy_with_logits(labels=tf.one_hot(X_s, params.num_char),
-                                                    logits=logits), name='xtropy_loss')
-
         train_op = tf.train.RMSPropOptimizer(learning_rate=params.learning_rate).minimize(
             loss=logp_loss, global_step=tf.train.get_global_step())
-
-        logging_hook = tf.train.LoggingTensorHook(tensors={"xtropy_loss": "xtropy_loss"},
-                                                  every_n_iter=100)
 
         return tf.estimator.EstimatorSpec(
             mode=mode,
             loss=logp_loss,
-            train_op=train_op,
-            training_chief_hooks=[logging_hook])
+            train_op=train_op)
     else:
         X_sampled = _transpose_batch_time(loop_state_ta.stack())
 
