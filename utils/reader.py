@@ -1,5 +1,6 @@
 import re
 from glob import glob
+from string import punctuation
 
 import dask.bag as db
 import tensorflow as tf
@@ -16,10 +17,12 @@ class InputData:
 
         logger.info('maximum length of training sent: %d' % params.len_threshold)
 
+        self.pattern = re.compile(r'(\s+|[{}])'.format(re.escape(punctuation)))
+
         with JobContext('indexing all codes...', logger):
             b = db.read_text([config.data_dir + '*.' + v for v in config.all_langs.values()])
 
-            all_chars = b.map(lambda x: re.findall(r"[\w]+|[^\s\w]", x)).flatten().distinct().filter(
+            all_chars = b.map(lambda x: self.tokenize(x)).flatten().distinct().filter(
                 lambda x: x).compute()
             unknown_char_idx = 0
             reserved_chars = 1
@@ -55,9 +58,11 @@ class InputData:
                                 c += all_lines[ln + window_len]
                                 window_len += 1
 
+                            c = self.tokenize(c)
                             yield [char2int_map.get(cc, unknown_char_idx) for cc in c], \
                                   len(c), \
                                   lang2int_map.get(lang, unknown_lang_idx)
+
             self.output_shapes = ([None], [], [])
             ds = Dataset.from_generator(generator=gen, output_types=(tf.int32, tf.int32, tf.int32),
                                         output_shapes=self.output_shapes).shuffle(buffer_size=1000)  # type: Dataset
@@ -71,7 +76,7 @@ class InputData:
         self.char2int = char2int_map
         self.lang2int = lang2int_map
         self.int2char = {i: c for c, i in char2int_map.items()}
-        self.int2user = {i: c for c, i in lang2int_map.items()}
+        self.int2lang = {i: c for c, i in lang2int_map.items()}
         self.unknown_char_idx = unknown_char_idx
         self.unknown_lang_idx = unknown_lang_idx
 
@@ -101,3 +106,6 @@ class InputData:
                     r.append(self.int2char[j])
             results.append(''.join(r))
         return results
+
+    def tokenize(self, line):
+        return [p for p in self.pattern.split(line) if p]
