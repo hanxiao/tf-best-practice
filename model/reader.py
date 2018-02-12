@@ -1,12 +1,14 @@
 import re
 from glob import glob
 from string import punctuation
+from typing import Dict
 
 import dask.bag as db
 import tensorflow as tf
 from tensorflow.contrib.learn import ModeKeys
 from tensorflow.python.data import Dataset
 
+from utils.helper import flatten
 from utils.logger import JobContext
 from utils.parameter import AppConfig, ModelParams
 
@@ -18,15 +20,20 @@ class InputData:
         logger.info('maximum length of training sent: %d' % params.len_threshold)
 
         self.pattern = re.compile(r'(\s+|[{}])'.format(re.escape(punctuation)))
-        self.char_based = params.char_based
 
         with JobContext('indexing all codes...', logger):
             b = db.read_text([config.data_dir + '*.' + v for v in config.all_langs.values()])
+            tokens = b.map(lambda x: self.tokenize(x)).flatten()
 
-            all_chars = b.map(lambda x: self.tokenize(x)).flatten().distinct().filter(
-                lambda x: x).compute()
+            # get frequent tokens with length > 1
+            freq_tokens = tokens.frequencies().filter(
+                lambda x: len(x[0]) > 1).topk(params.freqword_as_char, lambda x: x[1]).map(lambda x: x[0]).compute()
+
+            # get all characters
+            all_chars = b.flatten().distinct().filter(lambda x: x).compute()
+
             unknown_char_idx = 0
-            char2int_map = {c: idx for idx, c in enumerate(all_chars, start=1)}
+            char2int_map = {c: idx for idx, c in enumerate(all_chars + freq_tokens, start=1)}
 
             unknown_lang_idx = 0
             lang2int_map = {c: idx for idx, c in enumerate(config.all_langs.values(), start=1)}
@@ -55,8 +62,8 @@ class InputData:
                                 c += all_lines[ln + window_len]
                                 window_len += 1
 
-                            c = self.tokenize(c)
-                            yield [char2int_map.get(cc, unknown_char_idx) for cc in c], \
+                            c = self.tokenize_by_keywords(c, char2int_map)
+                            yield c, \
                                   len(c), \
                                   lang2int_map.get(lang, unknown_lang_idx)
 
@@ -105,4 +112,8 @@ class InputData:
         return results
 
     def tokenize(self, line):
-        return [p for p in self.pattern.split(line) if p] if not self.char_based else line
+        return [p for p in self.pattern.split(line) if p]
+
+    def tokenize_by_keywords(self, line, keywords: Dict[str, int]):
+        tokens = self.tokenize(line)
+        return flatten([keywords.get(t, [keywords.get(c, 0) for c in t]) for t in tokens])

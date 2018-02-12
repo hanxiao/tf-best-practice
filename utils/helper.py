@@ -1,4 +1,13 @@
+import collections
+
 import tensorflow as tf
+
+
+def flatten(x):
+    if isinstance(x, collections.Iterable):
+        return [a for i in x for a in flatten(i)]
+    else:
+        return [x]
 
 
 def touch(fname: str, times=None, create_dirs: bool = False):
