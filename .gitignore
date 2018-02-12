@@ -114,3 +114,4 @@ test.yaml
 *.iml
 run.py
 senza.yaml
+output/*

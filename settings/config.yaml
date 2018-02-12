@@ -4,6 +4,7 @@ default: &DEFAULT
   data_dir: './**/'
   log_dir: log/
   script_dir: script/
+  output_dir: output/
   all_langs: {'python': 'py'}
   log_format: '%(asctime)s:%(filename)s:%(funcName)s:[%(levelname)s] %(message)s'
 

@@ -1,4 +1,5 @@
 import itertools
+from datetime import datetime
 
 import tensorflow as tf
 from tensorflow.contrib.learn import ModeKeys
@@ -18,10 +19,13 @@ def main(argv):
     while True:
         model.train(input_fn=lambda: input_data.input_fn(ModeKeys.TRAIN), steps=1000)
         results_gen = model.predict(input_fn=lambda: input_data.input_fn(ModeKeys.INFER))
-        config.logger.info(input_data.decode(list(itertools.islice(results_gen, params.infer_batch_size))))
-        # train_spec = tf.estimator.TrainSpec(input_fn=lambda: input_data.input_fn(ModeKeys.TRAIN))
-        # eval_spec = tf.estimator.EvalSpec(input_fn=lambda: input_data.input_fn(ModeKeys.EVAL))
-        # tf.estimator.train_and_evaluate(model, train_spec, eval_spec)
+        with open(config.output_path, 'a') as fp:
+            fp.write(datetime.now().strftime("%m%d-%H%M") + '\n')
+            fp.writelines(input_data.decode(list(itertools.islice(results_gen, params.infer_batch_size))))
+            fp.write('\n\n')
+            # train_spec = tf.estimator.TrainSpec(input_fn=lambda: input_data.input_fn(ModeKeys.TRAIN))
+            # eval_spec = tf.estimator.EvalSpec(input_fn=lambda: input_data.input_fn(ModeKeys.EVAL))
+            # tf.estimator.train_and_evaluate(model, train_spec, eval_spec)
 
 
 if __name__ == "__main__":
