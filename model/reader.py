@@ -41,7 +41,7 @@ class InputData:
         with JobContext('computing some statistics...', logger):
             num_line = b.count().compute()
             num_char = len(char2int_map) + 1
-            num_lang = len(config.all_langs) + 1
+            num_lang = len(lang2int_map) + 1
             logger.info('# lines: %d' % num_line)
             logger.info('# chars: %d' % num_char)
             logger.info('# langs: %d' % num_lang)
@@ -63,9 +63,7 @@ class InputData:
                                 window_len += 1
 
                             c = self.tokenize_by_keywords(c, char2int_map)
-                            yield c, \
-                                  len(c), \
-                                  lang2int_map.get(lang, unknown_lang_idx)
+                            yield c, len(c), lang2int_map.get(lang, unknown_lang_idx)
 
             self.output_shapes = ([None], [], [])
             ds = Dataset.from_generator(generator=gen, output_types=(tf.int32, tf.int32, tf.int32),
