@@ -15,26 +15,18 @@ def model_fn(features, labels, mode, params, config):
     cur_batch_D = params.dim_embed
 
     hinit_embed = make_var('hinit_ebd', [params.num_lang, params.num_hidden])
-
     cinit_embed = make_var('cinit_ebd', [params.num_lang, params.num_hidden])
-
     zero_embed = make_var('zero_embed', [params.num_lang, cur_batch_D])
-
     char_embd = make_var('char_ebd', [params.num_char, params.dim_embed])
 
     if mode == ModeKeys.TRAIN or mode == ModeKeys.EVAL:
         X_c, X_s, L_c, L_s, T = features
-
-        cur_batch_B_Xc = tf.shape(X_c)[0]
-        Xc_embd = tf.nn.embedding_lookup(char_embd, X_c, name='ebd_context_seq')
-
         cur_batch_T = tf.shape(X_s)[1]
         Xs_embd = tf.nn.embedding_lookup(char_embd, X_s, name='ebd_nextline_seq')
-
         Xs_ta = tf.TensorArray(size=cur_batch_T, dtype=tf.float32).unstack(
             _transpose_batch_time(Xs_embd), 'TBD_Formatted_Xs')
     else:
-        T = [1] * params.infer_batch_size
+        X_c, L_c, T = features  # only give the context info
         cur_batch_T = params.infer_seq_length
 
     make_cell = {
@@ -54,15 +46,14 @@ def model_fn(features, labels, mode, params, config):
 
     with tf.variable_scope('Encoder'):
         # make a list of cells for dilated encoder
-        encoder_cell = make_cell('encoder_cell')
-        encoder_outputs, last_enc_state = tf.nn.dynamic_rnn(encoder_cell,
-                                                            inputs=Xc_embd,
-                                                            sequence_length=L_c,
-                                                            initial_state=cell_init_state,
-                                                            dtype=tf.float32)
+        _, last_enc_state = \
+            tf.nn.dynamic_rnn(make_cell('encoder_cell'),
+                              tf.nn.embedding_lookup(char_embd, X_c, name='ebd_context_seq'),
+                              sequence_length=L_c,
+                              initial_state=cell_init_state,
+                              dtype=tf.float32)
 
     with tf.variable_scope('Decoder'):
-
         # make a new cell for decoder
         decoder_cell = make_cell('decoder_cell')
         zero_step = tf.nn.embedding_lookup(zero_embed, T)
@@ -96,10 +87,10 @@ def model_fn(features, labels, mode, params, config):
             return get_dist(cell_out).prob(obs)
 
         with tf.name_scope('NADE'):
-            if mode == ModeKeys.TRAIN or mode == ModeKeys.EVAL:
-                output_ta = tf.TensorArray(size=cur_batch_T, dtype=tf.float32)
-            else:
-                output_ta = tf.TensorArray(size=cur_batch_T, dtype=tf.int32)
+            # use this TA to store sampled character in inference time
+            # and embed vector in training and evaluation time
+            output_ta = tf.TensorArray(size=cur_batch_T,
+                                       dtype=tf.int32 if mode == ModeKeys.INFER else tf.float32)
 
             def loop_fn(time, cell_output, cell_state, loop_state):
                 emit_output = cell_output  # == None for time == 0
@@ -127,11 +118,9 @@ def model_fn(features, labels, mode, params, config):
 
             decoder_emit_ta, _, loop_state_ta = tf.nn.raw_rnn(decoder_cell, loop_fn)
 
-    with tf.name_scope('Output'):
-        outputs = _transpose_batch_time(decoder_emit_ta.stack())
-
     if mode == ModeKeys.TRAIN or mode == ModeKeys.EVAL:
-        logp_loss = -tf.reduce_mean(tf.log(1e-6 + get_prob(outputs, X_s)))
+        out_logits = _transpose_batch_time(decoder_emit_ta.stack())
+        logp_loss = -tf.reduce_mean(tf.log(1e-6 + get_prob(out_logits, X_s)))
         train_op = tf.train.RMSPropOptimizer(learning_rate=params.learning_rate).minimize(
             loss=logp_loss, global_step=tf.train.get_global_step())
 
