@@ -17,7 +17,7 @@ def main(argv):
     input_data = InputData(config, params)
     model = tf.estimator.Estimator(model_fn=nade.model_fn, params=params)
     while True:
-        model.train(input_fn=lambda: input_data.input_fn(ModeKeys.TRAIN), steps=1000)
+        model.train(input_fn=lambda: input_data.input_fn(ModeKeys.TRAIN), steps=config.eval_step)
         results_gen = model.predict(input_fn=lambda: input_data.input_fn(ModeKeys.INFER))
         with open(config.output_path, 'a') as fp:
             fp.write(datetime.now().strftime("%m%d-%H%M") + '\n')

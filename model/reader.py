@@ -20,6 +20,10 @@ class InputData:
         logger.info('maximum length of training sent: %d' % params.len_threshold)
 
         self.pattern = re.compile(r'(\s+|[{}])'.format(re.escape(punctuation)))
+        self.unknown_char_idx = params.special_char['unknown']
+        self.start_char_idx = params.special_char['start']
+        self.end_char_idx = params.special_char['end']
+        self.unknown_lang_idx = params.special_char['unknown']
 
         with JobContext('indexing all codes...', logger):
             b = db.read_text([config.data_dir + '*.' + v for v in config.all_langs.values()])
@@ -32,11 +36,8 @@ class InputData:
             # get all characters
             all_chars = b.flatten().distinct().filter(lambda x: x).compute()
 
-            unknown_char_idx = 0
-            char2int_map = {c: idx for idx, c in enumerate(all_chars + freq_tokens, start=1)}
-
-            unknown_lang_idx = 0
-            lang2int_map = {c: idx for idx, c in enumerate(config.all_langs.values(), start=1)}
+            char2int_map = {c: idx for idx, c in enumerate(all_chars + freq_tokens, start=len(params.special_char))}
+            lang2int_map = {c: idx for idx, c in enumerate(config.all_langs.values(), start=len(params.special_lang))}
 
         with JobContext('computing some statistics...', logger):
             num_line = b.count().compute()
@@ -52,22 +53,27 @@ class InputData:
                              glob(config.data_dir + '*.' + v, recursive=True)]
                 for f, lang in file_list:
                     with open(f) as fp:
+                        context = [[self.start_char_idx]] * params.context_lines
                         all_lines = fp.readlines()
-                        total_lines = len(all_lines)
-                        for ln, line in enumerate(all_lines):
-                            c = line
-                            window_len = 1
-                            while (ln + window_len) < total_lines and len(
-                                            c + all_lines[ln + window_len]) < params.len_threshold:
-                                c += all_lines[ln + window_len]
-                                window_len += 1
+                        for line in all_lines:
+                            next_line = self.tokenize_by_keywords(line, char2int_map)
+                            context_line = flatten(context)
+                            yield context_line, next_line, \
+                                  len(context_line), len(next_line), \
+                                  lang2int_map.get(lang, self.unknown_lang_idx)
+                            context.append(next_line)
+                            context.pop(0)
+                        context_line = flatten(context)
+                        yield context_line, [self.end_char_idx], \
+                              len(context_line), 1, \
+                              lang2int_map.get(lang, self.unknown_lang_idx)
 
-                            c = self.tokenize_by_keywords(c, char2int_map)
-                            yield c, len(c), lang2int_map.get(lang, unknown_lang_idx)
-
-            self.output_shapes = ([None], [], [])
-            ds = Dataset.from_generator(generator=gen, output_types=(tf.int32, tf.int32, tf.int32),
-                                        output_shapes=self.output_shapes).shuffle(buffer_size=10000)  # type: Dataset
+            self.output_shapes = ([None], [None], [], [], [])
+            self.output_types = (tf.int32,) * len(self.output_shapes)
+            ds = Dataset.from_generator(generator=gen,
+                                        output_types=self.output_types,
+                                        output_shapes=self.output_shapes).shuffle(
+                buffer_size=params.batch_size * 100)  # type: Dataset
             self.eval_ds = ds.take(params.num_eval)
             self.train_ds = ds.skip(params.num_eval)
 
@@ -78,9 +84,6 @@ class InputData:
         self.lang2int = lang2int_map
         self.int2char = {i: c for c, i in char2int_map.items()}
         self.int2lang = {i: c for c, i in lang2int_map.items()}
-        self.unknown_char_idx = unknown_char_idx
-        self.unknown_lang_idx = unknown_lang_idx
-
         params.add_hparam('num_char', num_char)
         params.add_hparam('num_lang', num_lang)
         self.params = params
@@ -114,4 +117,4 @@ class InputData:
 
     def tokenize_by_keywords(self, line, keywords: Dict[str, int]):
         tokens = self.tokenize(line)
-        return flatten([keywords.get(t, [keywords.get(c, 0) for c in t]) for t in tokens])
+        return flatten([keywords.get(t, [keywords.get(c, self.unknown_char_idx) for c in t]) for t in tokens])
