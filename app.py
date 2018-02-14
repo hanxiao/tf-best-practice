@@ -11,10 +11,10 @@ from utils.parameter import AppConfig, ModelParams
 tf.logging.set_verbosity(tf.logging.INFO)
 
 
-def generate(model, data_io: DataIO, out_fn, lang):
+def generate(model, data_io: DataIO, out_fn, lang, max_infer_line):
     cur_ln = 0
     eof = False
-    while not eof:
+    while not eof and cur_ln < max_infer_line:
         results_gen = model.predict(
             input_fn=lambda: data_io.output_fn(cur_ln, out_fn, lang))
         infer_line, eof = data_io.decode(list(itertools.islice(results_gen, 1)))
@@ -33,7 +33,9 @@ def main(argv):
         model.train(input_fn=lambda: data_io.input_fn(ModeKeys.TRAIN), steps=params.train_step)
         global_step += params.train_step
         with JobContext('generating code at step %d...' % global_step, config.logger):
-            generate(model, data_io, config.output_path + '-%d.txt' % global_step, 'py')
+            generate(model, data_io,
+                     config.output_path + '-%d.txt' % global_step,
+                     'py', params.max_infer_line)
 
 
 if __name__ == "__main__":
