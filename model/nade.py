@@ -46,15 +46,16 @@ def model_fn(features, labels, mode, params, config):
 
     with tf.variable_scope('Encoder'):
         # make a list of cells for dilated encoder
+        encoder_cell = make_cell('encoder_cell')
         _, last_enc_state = \
-            tf.nn.dynamic_rnn(make_cell('encoder_cell'),
+            tf.nn.dynamic_rnn(encoder_cell,
                               tf.nn.embedding_lookup(char_embd, X_c, name='ebd_context_seq'),
                               initial_state=cell_init_state,
                               dtype=tf.float32)
 
     with tf.variable_scope('Decoder'):
         # make a new cell for decoder
-        decoder_cell = make_cell('decoder_cell')
+        decoder_cell = encoder_cell if params.share_cell else make_cell('decoder_cell')
         zero_step = tf.nn.embedding_lookup(zero_embed, T)
 
         output_layer_info = {

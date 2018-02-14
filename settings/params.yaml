@@ -14,6 +14,7 @@ default: &DEFAULT
   freqword_as_char: 100
   context_lines: 3  # number of lines as the context
   max_infer_line: 100
+  share_cell: true
   reserved_char:
     unknown: 0
     start: 1

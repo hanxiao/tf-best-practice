@@ -11,4 +11,5 @@ default: &DEFAULT
 aws:
   <<: *DEFAULT
   work_dir: ./
+  data_dir: './tensorflow/**/'
   all_langs: {'python': 'py'}
