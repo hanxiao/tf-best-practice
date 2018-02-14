@@ -26,9 +26,8 @@ lstm: &LSTM
   cell: lstm
   batch_size: 128
   num_eval: 1000
-  dim_embed: 64
-  num_hidden: 128
-  num_epoch: 100
+  dim_embed: 128
+  num_hidden: 256
   infer_seq_length: 200
   num_eval: 1000
 
