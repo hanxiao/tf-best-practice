@@ -102,6 +102,7 @@ class DataIO:
         self.int2lang = {i: c for c, i in lang2int_map.items()}
         params.add_hparam('num_char', num_char)
         params.add_hparam('num_lang', num_lang)
+        self.newline_char = self.char2int['\n']
         self.params = params
 
         logger.info('data loading finished!')
@@ -134,12 +135,16 @@ class DataIO:
             if j == self.end_char_idx:
                 eof = True
                 break
+            elif j == self.newline_char:
+                break
             elif j == self.start_char_idx:
                 r.append('<START>')
             elif j == self.unknown_char_idx:
                 r.append('<UNKNOWN>')
             else:
                 r.append(self.int2char[j])
+        if r and r[-1] != self.newline_char:
+            r.append('\n')
         return ''.join(r), eof
 
     def tokenize(self, line):
