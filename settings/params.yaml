@@ -1,24 +1,15 @@
 # YAML settings for the model parameters
 default: &DEFAULT
   batch_size: 32
-  split_ratio: 0.6
-  train_embedding: true
   cell: lstm
-  init_state_type: var
   dilation: [1, 2, 4, 8, 16, 32]
   num_hidden: 64
-  metric: cosine
   num_epoch: 1000
   optimizer: rmsp
   learning_rate: 1.0e-4
-  decay_rate: 0.97
-  loss: logisitc
-  len_threshold: 200
-  loss_at_each_step: true
   num_eval: 100
-  eval_step: 1000
+  train_step: 100
   infer_seq_length: 100
-  infer_batch_size: 10
   dim_embed: 16
   freqword_as_char: 100
   context_lines: 3  # number of lines as the context
@@ -32,7 +23,6 @@ default: &DEFAULT
 lstm: &LSTM
   <<: *DEFAULT
   cell: lstm
-  len_threshold: 200
   batch_size: 128
   num_eval: 1000
   dim_embed: 64

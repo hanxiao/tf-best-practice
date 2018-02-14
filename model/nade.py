@@ -26,7 +26,7 @@ def model_fn(features, labels, mode, params, config):
         Xs_ta = tf.TensorArray(size=cur_batch_T, dtype=tf.float32).unstack(
             _transpose_batch_time(Xs_embd), 'TBD_Formatted_Xs')
     else:
-        X_c, L_c, T = features  # only give the context info
+        X_c, T = features  # only give the context info
         cur_batch_T = params.infer_seq_length
 
     make_cell = {
@@ -49,7 +49,6 @@ def model_fn(features, labels, mode, params, config):
         _, last_enc_state = \
             tf.nn.dynamic_rnn(make_cell('encoder_cell'),
                               tf.nn.embedding_lookup(char_embd, X_c, name='ebd_context_seq'),
-                              sequence_length=L_c,
                               initial_state=cell_init_state,
                               dtype=tf.float32)
 

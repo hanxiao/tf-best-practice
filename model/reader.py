@@ -13,17 +13,15 @@ from utils.logger import JobContext
 from utils.parameter import AppConfig, ModelParams
 
 
-class InputData:
+class DataIO:
     def __init__(self, config: AppConfig, params: ModelParams):
         logger = config.logger
-
-        logger.info('maximum length of training sent: %d' % params.len_threshold)
-
         self.pattern = re.compile(r'(\s+|[{}])'.format(re.escape(punctuation)))
         self.unknown_char_idx = params.reserved_char['unknown']
         self.start_char_idx = params.reserved_char['start']
         self.end_char_idx = params.reserved_char['end']
         self.unknown_lang_idx = params.reserved_char['unknown']
+        self.int2reserved_char = {params.reserved_char[k]: k for k in params.reserved_char.keys()}
 
         with JobContext('indexing all codes...', logger):
             b = db.read_text([config.data_dir + '*.' + v for v in config.all_langs.values()])
@@ -48,6 +46,24 @@ class InputData:
             logger.info('# langs: %d (# reserved: %d)' % (num_lang, len(params.reserved_lang)))
 
         with JobContext('building data generator...', logger):
+            def infer():
+                context = [[self.start_char_idx]] * params.context_lines
+                if self.infer_cur_ln > 0:
+                    with open(self.infer_out_fn) as fp:
+                        all_lines = context + [self.tokenize_by_keywords(v, char2int_map) for v in fp.readlines()[
+                                                                                                   :self.infer_cur_ln]]
+                        context = all_lines[-params.context_lines:]
+                logger.info('context: %s' % context)
+                context_line = flatten(context)
+                yield context_line, \
+                      lang2int_map.get(self.infer_lang, self.unknown_lang_idx)
+
+            self.infer_output_shapes = ([None], [])
+            self.infer_output_types = (tf.int32,) * len(self.infer_output_shapes)
+            self.infer_ds = Dataset.from_generator(generator=infer,
+                                                   output_types=self.infer_output_types,
+                                                   output_shapes=self.infer_output_shapes)
+
             def gen():
                 file_list = [(w, v) for v in config.all_langs.values() for w in
                              glob(config.data_dir + '*.' + v, recursive=True)]
@@ -100,17 +116,31 @@ class InputData:
                    ModeKeys.INFER: lambda: Dataset.range(1)
                }[mode]().make_one_shot_iterator().get_next(), None
 
+    def output_fn(self, cur_ln, out_fn, lang):
+        self.infer_cur_ln = cur_ln
+        self.infer_out_fn = out_fn
+        if lang in self.lang2int:
+            self.infer_lang = lang
+        else:
+            raise ValueError('inference %s is not supported!' % lang)
+
+        return self.infer_ds.padded_batch(1,
+                                          padded_shapes=self.infer_output_shapes).make_one_shot_iterator().get_next(), None
+
     def decode(self, predictions):
-        results = []
-        for p in predictions:
-            r = []
-            for j in p:
-                if j == 0:
-                    break
-                else:
-                    r.append(self.int2char[j])
-            results.append(''.join(r))
-        return results
+        r = []
+        eof = False
+        for j in predictions[0]:
+            if j == self.end_char_idx:
+                eof = True
+                break
+            elif j == self.start_char_idx:
+                r.append('<START>')
+            elif j == self.unknown_char_idx:
+                r.append('<UNKNOWN>')
+            else:
+                r.append(self.int2char[j])
+        return ''.join(r), eof
 
     def tokenize(self, line):
         return [p for p in self.pattern.split(line) if p]
