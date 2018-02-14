@@ -34,14 +34,6 @@ def main(argv):
         global_step += params.train_step
         with JobContext('generating code at step %d...' % global_step, config.logger):
             generate(model, data_io, config.output_path + '-%d.txt' % global_step, 'py')
-        # results_gen = model.predict(input_fn=lambda: data_io.input_fn(ModeKeys.INFER))
-        # with open(config.output_path, 'a') as fp:
-        #     fp.write(datetime.now().strftime("%m%d-%H%M") + '\n')
-        #     fp.writelines())
-        #     fp.write('\n\n')
-        # train_spec = tf.estimator.TrainSpec(input_fn=lambda: data_io.input_fn(ModeKeys.TRAIN))
-        # eval_spec = tf.estimator.EvalSpec(input_fn=lambda: data_io.input_fn(ModeKeys.EVAL))
-        # tf.estimator.train_and_evaluate(model, train_spec, eval_spec)
 
 
 if __name__ == "__main__":
