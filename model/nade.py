@@ -8,7 +8,7 @@ from utils.sru import SRUCell
 
 
 def make_var(name, shape):
-    return tf.get_variable(name, shape, initializer=tf.random_uniform_initializer(0))
+    return tf.get_variable(name, shape, initializer=tf.orthogonal_initializer)
 
 
 def model_fn(features, labels, mode, params, config):
