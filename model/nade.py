@@ -11,6 +11,59 @@ def make_var(name, shape):
     return tf.get_variable(name, shape, initializer=tf.random_uniform_initializer(0))
 
 
+#
+# def model_fn(features, labels, mode, params, config):
+#
+#     cur_batch_D = params.dim_embed
+#
+#     hinit_embed = make_var('hinit_ebd', [params.num_lang, params.num_hidden])
+#     cinit_embed = make_var('cinit_ebd', [params.num_lang, params.num_hidden])
+#     zero_embed = make_var('zero_embed', [params.num_lang, cur_batch_D])
+#     char_embd = make_var('char_ebd', [params.num_char, params.dim_embed])
+#
+#     if mode == ModeKeys.TRAIN or mode == ModeKeys.EVAL:
+#         X_c, X_s, L_c, L_s, T = features
+#         cur_batch_T = tf.shape(X_s)[1]
+#         Xs_embd = tf.nn.embedding_lookup(char_embd, X_s, name='ebd_nextline_seq')
+#         Xs_ta = tf.TensorArray(size=cur_batch_T, dtype=tf.float32).unstack(
+#             _transpose_batch_time(Xs_embd), 'TBD_Formatted_Xs')
+#     else:
+#         X_c, L_c, T = features  # only give the context info
+#         cur_batch_T = params.infer_seq_length
+#
+#     make_cell = {
+#         'lstm': lambda x: LSTMCell(params.num_hidden, name=x, reuse=False),
+#         'sru': lambda x: SRUCell(params.num_hidden, name=x, reuse=False),
+#         'gru': lambda x: GRUCell(params.num_hidden, name=x, reuse=False)
+#     }[params.cell]
+#
+#     with tf.variable_scope('InitState'):
+#         h_init = tf.nn.embedding_lookup(hinit_embed, T)
+#         c_init = tf.nn.embedding_lookup(cinit_embed, T)
+#         cell_init_state = {
+#             'lstm': lambda: LSTMStateTuple(c_init, h_init),
+#             'sru': lambda: h_init,
+#             'gru': lambda: h_init,
+#         }[params.cell]()
+#
+#     with tf.variable_scope('Encoder'):
+#         # make a list of cells for dilated encoder
+#         Xc_embd = tf.nn.embedding_lookup(char_embd, X_c, name='ebd_context_seq')
+#         _, last_enc_state = \
+#             tf.nn.dynamic_rnn(make_cell('encoder_cell'),
+#                               Xc_embd,
+#                               sequence_length=L_c,
+#                               initial_state=cell_init_state,
+#                               dtype=tf.float32)
+#     dummy_loss = tf.reduce_sum(last_enc_state)
+#     train_op = tf.train.RMSPropOptimizer(learning_rate=params.learning_rate).minimize(
+#         loss=dummy_loss, global_step=tf.train.get_global_step())
+#     return tf.estimator.EstimatorSpec(
+#         mode=mode,
+#         loss=dummy_loss,
+#         train_op=train_op)
+
+
 def model_fn(features, labels, mode, params, config):
     cur_batch_D = params.dim_embed
 

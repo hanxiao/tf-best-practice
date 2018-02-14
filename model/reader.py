@@ -20,10 +20,10 @@ class InputData:
         logger.info('maximum length of training sent: %d' % params.len_threshold)
 
         self.pattern = re.compile(r'(\s+|[{}])'.format(re.escape(punctuation)))
-        self.unknown_char_idx = params.special_char['unknown']
-        self.start_char_idx = params.special_char['start']
-        self.end_char_idx = params.special_char['end']
-        self.unknown_lang_idx = params.special_char['unknown']
+        self.unknown_char_idx = params.reserved_char['unknown']
+        self.start_char_idx = params.reserved_char['start']
+        self.end_char_idx = params.reserved_char['end']
+        self.unknown_lang_idx = params.reserved_char['unknown']
 
         with JobContext('indexing all codes...', logger):
             b = db.read_text([config.data_dir + '*.' + v for v in config.all_langs.values()])
@@ -36,16 +36,16 @@ class InputData:
             # get all characters
             all_chars = b.flatten().distinct().filter(lambda x: x).compute()
 
-            char2int_map = {c: idx for idx, c in enumerate(all_chars + freq_tokens, start=len(params.special_char))}
-            lang2int_map = {c: idx for idx, c in enumerate(config.all_langs.values(), start=len(params.special_lang))}
+            char2int_map = {c: idx for idx, c in enumerate(all_chars + freq_tokens, start=len(params.reserved_char))}
+            lang2int_map = {c: idx for idx, c in enumerate(config.all_langs.values(), start=len(params.reserved_lang))}
 
         with JobContext('computing some statistics...', logger):
             num_line = b.count().compute()
-            num_char = len(char2int_map) + 1
-            num_lang = len(lang2int_map) + 1
+            num_char = max(char2int_map.values()) + 1
+            num_lang = max(lang2int_map.values()) + 1
             logger.info('# lines: %d' % num_line)
-            logger.info('# chars: %d' % num_char)
-            logger.info('# langs: %d' % num_lang)
+            logger.info('# chars: %d (# reserved: %d)' % (num_char, len(params.reserved_char)))
+            logger.info('# langs: %d (# reserved: %d)' % (num_lang, len(params.reserved_lang)))
 
         with JobContext('building data generator...', logger):
             def gen():

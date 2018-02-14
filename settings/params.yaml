@@ -22,11 +22,11 @@ default: &DEFAULT
   dim_embed: 16
   freqword_as_char: 100
   context_lines: 3  # number of lines as the context
-  special_char:
+  reserved_char:
     unknown: 0
     start: 1
     end: 2
-  special_lang:
+  reserved_lang:
     unknown: 0
 
 lstm: &LSTM
