@@ -25,6 +25,7 @@ lstm: &LSTM
   <<: *DEFAULT
   cell: lstm
   batch_size: 128
+  train_step: 1000
   num_eval: 1000
   dim_embed: 128
   num_hidden: 256
