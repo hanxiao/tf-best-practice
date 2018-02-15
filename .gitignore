@@ -115,3 +115,4 @@ test.yaml
 run.py
 senza.yaml
 output/*
+trained/
