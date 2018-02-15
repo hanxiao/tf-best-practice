@@ -30,5 +30,6 @@ class AppConfig(YParams):
         self.instance_name = os.getenv('APPNAME', 'app') + datetime.now().strftime("%m%d-%H%M")
         self.log_path = self.log_dir + self.instance_name + '.log'
         self.output_path = self.output_dir + self.instance_name
+        self.model_dir = self.model_dir + self.instance_name
         touch_dir(self.output_dir)
         self.logger = get_logger(__name__, self.log_path, self.log_format)

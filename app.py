@@ -3,8 +3,8 @@ import itertools
 import tensorflow as tf
 from tensorflow.contrib.learn import ModeKeys
 
-from model import nade
-from model.dataio import DataIO
+from basic import nade
+from basic.dataio import DataIO
 from utils.logger import JobContext
 from utils.parameter import AppConfig, ModelParams
 
