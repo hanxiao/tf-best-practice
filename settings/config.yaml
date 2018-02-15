@@ -12,10 +12,9 @@ default: &DEFAULT
 aws: &AWS
   <<: *DEFAULT
   work_dir: ./
-  model_dir: '/tmp/tmpk9n9lzuf'
   data_dir: './tensorflow/**/'
   all_langs: {'python': 'py'}
 
-awsnew:
+awsload:
   <<: *AWS
-  model_dir: ~
+  model_dir: '/tmp/tmpk9n9lzuf'

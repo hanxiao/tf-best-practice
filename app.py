@@ -4,7 +4,7 @@ import tensorflow as tf
 from tensorflow.contrib.learn import ModeKeys
 
 from model import nade
-from model.reader import DataIO
+from model.dataio import DataIO
 from utils.logger import JobContext
 from utils.parameter import AppConfig, ModelParams
 
