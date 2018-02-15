@@ -27,7 +27,7 @@ def main(argv):
     config = AppConfig('settings/config.yaml', argv[1])
     params = ModelParams('settings/params.yaml', argv[2])
     data_io = DataIO(config, params)
-    model = tf.estimator.Estimator(model_fn=nade.model_fn, params=params)
+    model = tf.estimator.Estimator(model_fn=nade.model_fn, params=params, model_dir=config.model_dir)
     global_step = 0
     while True:
         model.train(input_fn=lambda: data_io.input_fn(ModeKeys.TRAIN), steps=params.train_step)

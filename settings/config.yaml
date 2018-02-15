@@ -5,11 +5,17 @@ default: &DEFAULT
   log_dir: log/
   script_dir: script/
   output_dir: output/
+  model_dir: trained/
   all_langs: {'python': 'py'}
   log_format: '%(asctime)s:%(filename)s:%(funcName)s:[%(levelname)s] %(message)s'
 
-aws:
+aws: &AWS
   <<: *DEFAULT
   work_dir: ./
+  model_dir: '/tmp/tmpk9n9lzuf'
   data_dir: './tensorflow/**/'
   all_langs: {'python': 'py'}
+
+awsnew:
+  <<: *AWS
+  model_dir: ~
