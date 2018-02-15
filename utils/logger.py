@@ -1,6 +1,8 @@
 import time
 from logging import Logger
 
+import shared
+
 
 def rotator(source, dest):
     import gzip, os
@@ -34,9 +36,9 @@ def get_logger(name: str, log_path: str, log_format) -> Logger:
 
 
 class JobContext:
-    def __init__(self, msg, logger: Logger = None):
+    def __init__(self, msg):
         self._msg = msg
-        self._logger = logger
+        self._logger = shared.logger
 
     def __enter__(self):
         self.start = time.clock()

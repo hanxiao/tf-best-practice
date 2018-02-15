@@ -1,7 +1,7 @@
 import itertools
 
 import tensorflow as tf
-from tensorflow.contrib.learn import ModeKeys
+from tensorflow.contrib.learn import ModeKeys, Estimator
 
 from basic import nade
 from basic.dataio import DataIO
@@ -11,7 +11,7 @@ from utils.parameter import AppConfig, ModelParams
 tf.logging.set_verbosity(tf.logging.INFO)
 
 
-def generate(model, data_io: DataIO, out_fn, lang, max_infer_line):
+def generate(model: Estimator, data_io: DataIO, out_fn, lang, max_infer_line):
     cur_ln = 0
     eof = False
     while not eof and cur_ln < max_infer_line:
@@ -27,12 +27,14 @@ def main(argv):
     config = AppConfig('settings/config.yaml', argv[1])
     params = ModelParams('settings/params.yaml', argv[2])
     data_io = DataIO(config, params)
+    data_io.dump()
+    exit()
     model = tf.estimator.Estimator(model_fn=nade.model_fn, params=params, model_dir=config.model_dir)
     global_step = 0
     while True:
         model.train(input_fn=lambda: data_io.input_fn(ModeKeys.TRAIN), steps=params.train_step)
         global_step += params.train_step
-        with JobContext('generating code at step %d...' % global_step, config.logger):
+        with JobContext('generating code at step %d...' % global_step):
             generate(model, data_io,
                      config.output_path + '-%d.txt' % global_step,
                      'py', params.max_infer_line)

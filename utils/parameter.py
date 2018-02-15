@@ -1,4 +1,5 @@
 import os
+import shutil
 from datetime import datetime
 
 from ruamel.yaml import YAML
@@ -14,6 +15,10 @@ class YParams(HParams):
         with open(yaml_fn) as fp:
             for k, v in YAML().load(fp)[config_name].items():
                 self.add_hparam(k, v)
+        self.yaml_fn = yaml_fn
+
+    def copyto(self, dir):
+        shutil.copy2(self.yaml_fn, dir)
 
 
 class ModelParams(YParams):
@@ -30,6 +35,8 @@ class AppConfig(YParams):
         self.instance_name = os.getenv('APPNAME', 'app') + datetime.now().strftime("%m%d-%H%M")
         self.log_path = self.log_dir + self.instance_name + '.log'
         self.output_path = self.output_dir + self.instance_name
-        self.model_dir = self.model_dir + self.instance_name
+        self.model_dir = self.model_dir + self.instance_name + '/'
         touch_dir(self.output_dir)
-        self.logger = get_logger(__name__, self.log_path, self.log_format)
+        touch_dir(self.model_dir)
+        import shared
+        shared.logger = get_logger(__name__, self.log_path, self.log_format)
