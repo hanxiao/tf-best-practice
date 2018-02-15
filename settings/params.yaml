@@ -31,7 +31,6 @@ lstm: &LSTM
   dim_embed: 128
   num_hidden: 256
   infer_seq_length: 200
-  num_eval: 1000
 
 sru:
   <<: *LSTM

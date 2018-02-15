@@ -1,8 +1,10 @@
 import itertools
 
 import tensorflow as tf
+from ruamel.yaml import YAML
 from tensorflow.contrib.learn import ModeKeys, Estimator
 
+import shared
 from basic import nade
 from basic.dataio import DataIO
 from utils.logger import JobContext
@@ -23,13 +25,29 @@ def generate(model: Estimator, data_io: DataIO, out_fn, lang, max_infer_line):
         cur_ln += 1
 
 
+def parse_arg(argv):
+    if len(argv) > 3:
+        config = AppConfig(argv[3] + '/config.yaml', argv[1], argv[3].split('/')[-1])
+        params = ModelParams(argv[3] + '/params.yaml', argv[2])
+        yaml = YAML(typ='unsafe', pure=True)
+        yaml.register_class(DataIO)
+        with open(argv[3] + '/dataio.yaml') as fp:
+            data_io = yaml.load(fp)  # type: DataIO
+            data_io.after_init(config, params)
+        shared.logger.info('recovered from %s' % argv[3])
+    else:
+        config = AppConfig('settings/config.yaml', argv[1])
+        params = ModelParams('settings/params.yaml', argv[2])
+        data_io = DataIO(config, params)
+
+    shared.logger.info('configuration loaded!')
+    return config, params, data_io
+
+
 def main(argv):
-    config = AppConfig('settings/config.yaml', argv[1])
-    params = ModelParams('settings/params.yaml', argv[2])
-    data_io = DataIO(config, params)
-    data_io.dump()
-    exit()
+    config, params, data_io = parse_arg(argv)
     model = tf.estimator.Estimator(model_fn=nade.model_fn, params=params, model_dir=config.model_dir)
+
     global_step = 0
     while True:
         model.train(input_fn=lambda: data_io.input_fn(ModeKeys.TRAIN), steps=params.train_step)

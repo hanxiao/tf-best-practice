@@ -15,6 +15,7 @@ from utils.parameter import AppConfig, ModelParams
 
 
 class DataIO:
+
     def __init__(self, config: AppConfig, params: ModelParams):
         # copy yaml to model dir
         config.copyto(config.model_dir)
@@ -56,14 +57,16 @@ class DataIO:
             logger.info('# langs: %d (# reserved: %d)' % (self.num_lang, len(params.reserved_lang)))
             logger.info('linebreak idx: %d' % self.newline_char)
 
-        with JobContext('building data generator...'):
-            self.build_infer_fn(config, params)
-            self.build_train_fn(config, params)
+        self.dump(config.dataio_path)
+        self.after_init(config, params)
 
+    def after_init(self, config: AppConfig, params: ModelParams):
         params.add_hparam('num_char', self.num_char)
         params.add_hparam('num_lang', self.num_lang)
 
-        logger.info('data loading finished!')
+        with JobContext('building data generator...'):
+            self.build_infer_fn(config, params)
+            self.build_train_fn(config, params)
 
     def input_fn(self, mode: ModeKeys):
         return {
@@ -162,7 +165,9 @@ class DataIO:
         kw = self.char2int
         return flatten([kw.get(t, [kw.get(c, self.unknown_char_idx) for c in t]) for t in tokens])
 
-    def dump(self):
-        import sys
-        yaml = YAML(typ='unsafe')
-        yaml.dump(self, sys.stdout)
+    def dump(self, fn):
+        yaml = YAML(typ='unsafe', pure=True)
+        yaml.register_class(DataIO)
+        with open(fn, 'w') as fp:
+            yaml.dump(self, fp)
+        shared.logger.info('DataIO is dumped to %s' % fn)

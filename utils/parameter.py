@@ -26,16 +26,18 @@ class ModelParams(YParams):
 
 
 class AppConfig(YParams):
-    def __init__(self, yaml_fn, config_name):
+    def __init__(self, yaml_fn, config_name, app_name=None):
         super().__init__(yaml_fn, config_name)
         self.data_dir = self.work_dir + self.data_dir
         self.log_dir = self.work_dir + self.log_dir
         self.script_dir = self.work_dir + self.script_dir
         self.output_dir = self.work_dir + self.output_dir
-        self.instance_name = os.getenv('APPNAME', 'app') + datetime.now().strftime("%m%d-%H%M")
+        self.instance_name = os.getenv('APPNAME', 'app') + datetime.now().strftime(
+            "%m%d-%H%M") if not app_name else app_name
         self.log_path = self.log_dir + self.instance_name + '.log'
         self.output_path = self.output_dir + self.instance_name
         self.model_dir = self.model_dir + self.instance_name + '/'
+        self.dataio_path = self.model_dir + 'dataio.yaml'
         touch_dir(self.output_dir)
         touch_dir(self.model_dir)
         import shared
