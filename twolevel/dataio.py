@@ -114,6 +114,7 @@ class DataIO:
                          glob(config.data_dir + '*.' + v, recursive=True)]
             for f, lang in file_list:
                 with open(f) as fp:
+                    linebreak = list(range(params.context_lines))
                     context = [[self.start_char_idx]] * params.context_lines
                     all_lines = fp.readlines()
                     for line in all_lines:
@@ -121,15 +122,22 @@ class DataIO:
                         context_line = flatten(context)
                         yield context_line, next_line, \
                               len(context_line), len(next_line), \
-                              self.lang2int.get(lang, self.unknown_lang_idx)
+                              self.lang2int.get(lang, self.unknown_lang_idx), \
+                              flatten(linebreak)
+
                         context.append(next_line)
                         context.pop(0)
+                        linebreak.append(linebreak[-1] + len(next_line))
+                        linebreak = [v - linebreak[0] - 1 for v in linebreak]
+                        linebreak.pop(0)
+
                     context_line = flatten(context)
                     yield context_line, [self.end_char_idx], \
                           len(context_line), 1, \
-                          self.lang2int.get(lang, self.unknown_lang_idx)
+                          self.lang2int.get(lang, self.unknown_lang_idx), \
+                          linebreak
 
-        self.output_shapes = ([None], [None], [], [], [])
+        self.output_shapes = ([None], [None], [], [], [], [None])
         self.output_types = (tf.int32,) * len(self.output_shapes)
         ds = Dataset.from_generator(generator=gen,
                                     output_types=self.output_types,
@@ -140,18 +148,33 @@ class DataIO:
 
     def build_infer_fn(self, config: AppConfig, params: ModelParams):
         def gen():
+            linebreaks = list(range(params.context_lines))
             context = [[self.start_char_idx]] * params.context_lines
-            if self.infer_cur_ln > 0:
-                with open(self.infer_out_fn) as fp:
-                    all_lines = context + [self.tokenize_by_keywords(v) for v in fp.readlines()[
-                                                                                 :self.infer_cur_ln]]
-                    context = all_lines[-params.context_lines:]
-            shared.logger.info('context: %s' % context)
-            context_line = flatten(context)
-            yield context_line, \
-                  self.lang2int.get(self.infer_lang, self.unknown_lang_idx)
 
-        self.infer_output_shapes = ([None], [])
+            with open(self.infer_out_fn) as fp:
+                all_lines = [self.tokenize_by_keywords(v) for v in fp.readlines()]
+                if len(all_lines) > 0:
+                    context += all_lines
+                    linebreaks = []
+                    for v in context:
+                        if linebreaks:
+                            linebreaks.append(len(v) + linebreaks[-1])
+                        else:
+                            linebreaks.append(0)
+                    print(linebreaks)
+                    context = context[-params.context_lines:]
+                    linebreaks = [v - linebreaks[-params.context_lines - 1] - 1 for v in linebreaks]
+                    linebreaks = linebreaks[-params.context_lines:]
+
+                    context_line = flatten(context)
+
+                    shared.logger.info('context: %s' % context)
+
+                    yield context_line, \
+                          self.lang2int.get(self.infer_lang, self.unknown_lang_idx), \
+                          linebreaks
+
+        self.infer_output_shapes = ([None], [], [None])
         self.infer_output_types = (tf.int32,) * len(self.infer_output_shapes)
         self.infer_ds = Dataset.from_generator(generator=gen,
                                                output_types=self.infer_output_types,

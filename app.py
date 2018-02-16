@@ -5,8 +5,8 @@ from ruamel.yaml import YAML
 from tensorflow.contrib.learn import ModeKeys, Estimator
 
 import shared
-from basic import nade
-from basic.dataio import DataIO
+from twolevel import nade
+from twolevel.dataio import DataIO
 from utils.logger import JobContext
 from utils.parameter import AppConfig, ModelParams
 
