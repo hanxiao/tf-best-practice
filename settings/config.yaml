@@ -14,7 +14,3 @@ aws: &AWS
   work_dir: ./
   data_dir: './tensorflow/**/'
   all_langs: {'python': 'py'}
-
-awsload:
-  <<: *AWS
-  model_dir: '/tmp/tmpk9n9lzuf'
