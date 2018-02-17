@@ -166,13 +166,13 @@ class DataIO:
                     linebreaks = [v - linebreaks[-params.context_lines - 1] - 1 for v in linebreaks]
                     linebreaks = linebreaks[-params.context_lines:]
 
-                    context_line = flatten(context)
+                context_line = flatten(context)
 
-                    shared.logger.info('context: %s' % context)
+                shared.logger.info('context: %s' % context)
 
-                    yield context_line, \
-                          self.lang2int.get(self.infer_lang, self.unknown_lang_idx), \
-                          linebreaks
+                yield context_line, \
+                      self.lang2int.get(self.infer_lang, self.unknown_lang_idx), \
+                      linebreaks
 
         self.infer_output_shapes = ([None], [], [None])
         self.infer_output_types = (tf.int32,) * len(self.infer_output_shapes)
