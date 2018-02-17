@@ -7,6 +7,7 @@ from tensorflow.contrib.learn import ModeKeys, Estimator
 import shared
 from bilevel import seq2seq
 from bilevel.dataio import DataIO
+from utils.helper import touch
 from utils.logger import JobContext
 from utils.parameter import AppConfig, ModelParams
 
@@ -16,6 +17,7 @@ tf.logging.set_verbosity(tf.logging.INFO)
 def generate(model: Estimator, data_io: DataIO, out_fn, lang, max_infer_line):
     cur_ln = 0
     eof = False
+    touch(out_fn)
     while not eof and cur_ln < max_infer_line:
         results_gen = model.predict(
             input_fn=lambda: data_io.output_fn(cur_ln, out_fn, lang))
