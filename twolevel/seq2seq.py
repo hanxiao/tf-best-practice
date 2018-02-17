@@ -20,14 +20,17 @@ def model_fn(features, labels, mode, params, config):
     char_embd = make_var('char_ebd', [params.num_char, params.dim_embed])
 
     if mode == ModeKeys.TRAIN or mode == ModeKeys.EVAL:
-        X_c, X_s, L_c, L_s, T = features
+        X_c, X_s, L_c, L_s, T, B = features
         cur_batch_T = tf.shape(X_s)[1]
         Xs_embd = tf.nn.embedding_lookup(char_embd, X_s, name='ebd_nextline_seq')
         Xs_ta = tf.TensorArray(size=cur_batch_T, dtype=tf.float32).unstack(
             _transpose_batch_time(Xs_embd), 'TBD_Formatted_Xs')
     else:
-        X_c, T = features  # only give the context info
+        X_c, T, B = features  # only give the context info
         cur_batch_T = params.infer_seq_length
+
+    tmp_mask = tf.tile(tf.expand_dims(tf.range(0, tf.shape(X_c)[0]), 1), [1, 3])
+    br_idx = tf.stack([tmp_mask, B], axis=2)
 
     make_cell = {
         'lstm': lambda x: LSTMCell(params.num_hidden, name=x, reuse=False),
@@ -47,11 +50,17 @@ def model_fn(features, labels, mode, params, config):
     with tf.variable_scope('Encoder'):
         # make a list of cells for dilated encoder
         encoder_cell = make_cell('encoder_cell')
-        _, last_enc_state = \
+        encoder_output, _ = \
             tf.nn.dynamic_rnn(encoder_cell,
                               tf.nn.embedding_lookup(char_embd, X_c, name='ebd_context_seq'),
                               initial_state=cell_init_state,
                               dtype=tf.float32)
+
+    with tf.variable_scope('LineEncoder'):
+        # encoding high-level linewise information
+        br_output = tf.gather_nd(encoder_output, br_idx)
+        br_cell = make_cell('line_encoder_cell')
+        _, last_enc_state = tf.nn.dynamic_rnn(br_cell, br_output, dtype=tf.float32)
 
     with tf.variable_scope('Decoder'):
         # make a new cell for decoder

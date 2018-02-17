@@ -5,7 +5,7 @@ from ruamel.yaml import YAML
 from tensorflow.contrib.learn import ModeKeys, Estimator
 
 import shared
-from twolevel import nade
+from twolevel import seq2seq
 from twolevel.dataio import DataIO
 from utils.logger import JobContext
 from utils.parameter import AppConfig, ModelParams
@@ -46,7 +46,7 @@ def parse_arg(argv):
 
 def main(argv):
     config, params, data_io = parse_arg(argv)
-    model = tf.estimator.Estimator(model_fn=nade.model_fn, params=params, model_dir=config.model_dir)
+    model = tf.estimator.Estimator(model_fn=seq2seq.model_fn, params=params, model_dir=config.model_dir)
 
     global_step = 0
     while True:
@@ -59,4 +59,23 @@ def main(argv):
 
 
 if __name__ == "__main__":
+    # import numpy as np
+    #
+    # B = 5
+    # T = 10
+    # D = 128
+    # a = tf.constant(np.random.random([B, T, D]))
+    # x = tf.constant([[1, 2, 3], [2, 3, 4], [3, 4, 5], [4, 5, 6], [5, 6, 7]])
+    # sequence_length = tf.constant([1, 2, 3, 4, 5, 6, 7, 8, 9, 9])
+    # with tf.Session() as sess:
+    #     print(sess.run(a))
+    #     print(sess.run(x))
+    #     u = tf.tile(tf.expand_dims(tf.range(0, B), 1), [1, 3])
+    #     s = tf.stack([u, x], axis=2)
+    #     print(sess.run(s))
+    #
+    #     print(sess.run(tf.gather_nd(a, [[[0, 1], [0, 2], [0, 3]], [[1, 2], [1, 3], [1, 4]]])))
+    #     print(sess.run(tf.shape(tf.gather_nd(a, s))))
+    #
+    # exit()
     tf.app.run()
