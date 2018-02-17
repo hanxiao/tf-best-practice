@@ -29,7 +29,7 @@ def model_fn(features, labels, mode, params, config):
         X_c, L_c, T, B = features  # only give the context info
         cur_batch_T = params.infer_seq_length
 
-    tmp_mask = tf.tile(tf.expand_dims(tf.range(0, tf.shape(X_c)[0]), 1), [1, 3])
+    tmp_mask = tf.tile(tf.expand_dims(tf.range(0, tf.shape(X_c)[0]), 1), [1, params.context_lines])
     br_idx = tf.stack([tmp_mask, B], axis=2)
 
     make_cell = {

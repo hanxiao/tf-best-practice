@@ -25,12 +25,13 @@ default: &DEFAULT
 lstm: &LSTM
   <<: *DEFAULT
   cell: lstm
-  batch_size: 128
+  batch_size: 256
   train_step: 1000
   num_eval: 1000
   dim_embed: 128
   num_hidden: 256
-  infer_seq_length: 200
+  infer_seq_length: 100
+  context_lines: 5
 
 sru:
   <<: *LSTM
