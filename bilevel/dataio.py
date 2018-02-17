@@ -161,7 +161,6 @@ class DataIO:
                             linebreaks.append(len(v) + linebreaks[-1])
                         else:
                             linebreaks.append(0)
-                    print(linebreaks)
                     context = context[-params.context_lines:]
                     linebreaks = [v - linebreaks[-params.context_lines - 1] - 1 for v in linebreaks]
                     linebreaks = linebreaks[-params.context_lines:]
@@ -170,11 +169,11 @@ class DataIO:
 
                 shared.logger.info('context: %s' % context)
 
-                yield context_line, \
+                yield context_line, len(context_line), \
                       self.lang2int.get(self.infer_lang, self.unknown_lang_idx), \
                       linebreaks
 
-        self.infer_output_shapes = ([None], [], [None])
+        self.infer_output_shapes = ([None], [], [], [None])
         self.infer_output_types = (tf.int32,) * len(self.infer_output_shapes)
         self.infer_ds = Dataset.from_generator(generator=gen,
                                                output_types=self.infer_output_types,

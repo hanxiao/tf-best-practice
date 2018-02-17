@@ -26,7 +26,7 @@ def model_fn(features, labels, mode, params, config):
         Xs_ta = tf.TensorArray(size=cur_batch_T, dtype=tf.float32).unstack(
             _transpose_batch_time(Xs_embd), 'TBD_Formatted_Xs')
     else:
-        X_c, T, B = features  # only give the context info
+        X_c, L_c, T, B = features  # only give the context info
         cur_batch_T = params.infer_seq_length
 
     tmp_mask = tf.tile(tf.expand_dims(tf.range(0, tf.shape(X_c)[0]), 1), [1, 3])
@@ -54,6 +54,7 @@ def model_fn(features, labels, mode, params, config):
             tf.nn.dynamic_rnn(encoder_cell,
                               tf.nn.embedding_lookup(char_embd, X_c, name='ebd_context_seq'),
                               initial_state=cell_init_state,
+                              sequence_length=L_c,
                               dtype=tf.float32)
 
     with tf.variable_scope('LineEncoder'):
