@@ -5,8 +5,8 @@ from ruamel.yaml import YAML
 from tensorflow.contrib.learn import ModeKeys, Estimator
 
 import shared
-from twolevel import seq2seq
-from twolevel.dataio import DataIO
+from bilevel import seq2seq
+from bilevel.dataio import DataIO
 from utils.logger import JobContext
 from utils.parameter import AppConfig, ModelParams
 
