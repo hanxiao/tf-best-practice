@@ -21,6 +21,7 @@ def model_fn(features, labels, mode, params, config):
 
     if mode == ModeKeys.TRAIN or mode == ModeKeys.EVAL:
         X_c, X_s, L_c, L_s, T, B = features
+        cur_batch_B = tf.shape(X_s)[0]
         cur_batch_T = tf.shape(X_s)[1]
         Xs_embd = tf.nn.embedding_lookup(char_embd, X_s, name='ebd_nextline_seq')
         Xs_ta = tf.TensorArray(size=cur_batch_T, dtype=tf.float32).unstack(
@@ -129,8 +130,10 @@ def model_fn(features, labels, mode, params, config):
             decoder_emit_ta, _, loop_state_ta = tf.nn.raw_rnn(decoder_cell, loop_fn)
 
     if mode == ModeKeys.TRAIN or mode == ModeKeys.EVAL:
+        target_mask = tf.sequence_mask(L_s, dtype=tf.float32)
         out_logits = _transpose_batch_time(decoder_emit_ta.stack())
-        logp_loss = -tf.reduce_mean(tf.log(1e-6 + get_prob(out_logits, X_s)))
+        logp_loss = -tf.reduce_sum(tf.log(1e-6 + get_prob(out_logits, X_s)) * target_mask) / tf.cast(cur_batch_B,
+                                                                                                     tf.float32)
         train_op = tf.train.RMSPropOptimizer(learning_rate=params.learning_rate).minimize(
             loss=logp_loss, global_step=tf.train.get_global_step())
 

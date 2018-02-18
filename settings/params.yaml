@@ -30,7 +30,7 @@ lstm: &LSTM
   num_eval: 1000
   dim_embed: 128
   num_hidden: 256
-  infer_seq_length: 100
+  infer_seq_length: 80
   context_lines: 5
 
 sru:
