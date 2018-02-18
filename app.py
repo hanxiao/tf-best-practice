@@ -28,6 +28,7 @@ def generate(model: Estimator, data_io: DataIO, out_fn, lang, max_infer_line):
 
 
 def parse_arg(argv):
+    do_infer = False
     if len(argv) > 3:
         config = AppConfig(argv[3] + '/config.yaml', argv[1], argv[3].split('/')[-1])
         params = ModelParams(argv[3] + '/params.yaml', argv[2])
@@ -37,27 +38,37 @@ def parse_arg(argv):
             data_io = yaml.load(fp)  # type: DataIO
             data_io.after_init(config, params)
         shared.logger.info('recovered from %s' % argv[3])
+        if len(argv) > 4 and argv[4] == 'infer':
+            do_infer = True
     else:
         config = AppConfig('settings/config.yaml', argv[1])
         params = ModelParams('settings/params.yaml', argv[2])
         data_io = DataIO(config, params)
 
     shared.logger.info('configuration loaded!')
-    return config, params, data_io
+    return config, params, data_io, do_infer
 
 
-def main(argv):
-    config, params, data_io = parse_arg(argv)
-    model = tf.estimator.Estimator(model_fn=seq2seq.model_fn, params=params, model_dir=config.model_dir)
-
+def train(config, params, data_io, model):
     global_step = 0
     while True:
         model.train(input_fn=lambda: data_io.input_fn(ModeKeys.TRAIN), steps=params.train_step)
         global_step += params.train_step
-        with JobContext('generating code at step %d...' % global_step):
-            generate(model, data_io,
-                     config.output_path + '-%d.txt' % global_step,
-                     'py', params.max_infer_line)
+        infer(config, params, data_io, model, global_step)
+
+
+def infer(config, params, data_io, model, step=0):
+    with JobContext('generating code at step %d...', ):
+        generate(model, data_io, config.output_path + '-%d.txt' % step, 'py', params.max_infer_line)
+
+
+def main(argv):
+    config, params, data_io, do_infer = parse_arg(argv)
+    model = tf.estimator.Estimator(model_fn=seq2seq.model_fn, params=params, model_dir=config.model_dir)
+    if do_infer:
+        infer(config, params, data_io, model)
+    else:
+        train(config, params, data_io, model)
 
 
 if __name__ == "__main__":
