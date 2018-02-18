@@ -11,6 +11,10 @@ def make_var(name, shape):
     return tf.get_variable(name, shape, initializer=tf.orthogonal_initializer)
 
 
+def normalize_loss(loss, mask, batch_size):
+    return tf.reduce_sum(tf.dynamic_partition(loss, mask, 2)[1]) / batch_size
+
+
 def model_fn(features, labels, mode, params, config):
     cur_batch_D = params.dim_embed
 
@@ -130,13 +134,12 @@ def model_fn(features, labels, mode, params, config):
             decoder_emit_ta, _, loop_state_ta = tf.nn.raw_rnn(decoder_cell, loop_fn)
 
     if mode == ModeKeys.TRAIN or mode == ModeKeys.EVAL:
-        target_mask = tf.sequence_mask(L_s, dtype=tf.float32)
+        target_mask = tf.sequence_mask(L_s, dtype=tf.int32)
         batch_size = tf.to_float(cur_batch_B)
         decoder_out = _transpose_batch_time(decoder_emit_ta.stack())
 
-        xentropy_loss = tf.reduce_sum(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=X_s, logits=get_logits(
-            decoder_out)) * target_mask) / batch_size
-        logp_loss = -tf.reduce_sum(tf.log(1e-6 + get_prob(decoder_out, X_s)) * target_mask) / batch_size
+        xentropy_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=X_s, logits=get_logits(decoder_out))
+        logp_loss = -tf.log(1e-6 + get_prob(decoder_out, X_s))
 
         if params.loss == 'xentropy':
             model_loss = xentropy_loss
@@ -147,6 +150,9 @@ def model_fn(features, labels, mode, params, config):
         else:
             raise NotImplementedError
 
+        model_loss = normalize_loss(model_loss, target_mask, batch_size)
+        aux_loss = normalize_loss(aux_loss, target_mask, batch_size)
+
         train_op = tf.train.RMSPropOptimizer(learning_rate=params.learning_rate).minimize(
             loss=model_loss, global_step=tf.train.get_global_step())
 
@@ -155,8 +161,8 @@ def model_fn(features, labels, mode, params, config):
                                                                 'min-idx': tf.reduce_min(X_s),
                                                                 'shape_x': tf.shape(X_s),
                                                                 'shape_out': tf.shape(decoder_out),
-                                                                'logp_loss': logp_loss,
-                                                                'xentropy_loss': xentropy_loss},
+                                                                'model_loss': model_loss,
+                                                                'aux_loss': aux_loss},
                                                        every_n_iter=1)]
         else:
             logging_hook = None

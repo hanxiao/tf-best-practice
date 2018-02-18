@@ -22,7 +22,7 @@ default: &DEFAULT
   reserved_lang:
     unknown: 0
   loss: xentropy
-  train_loghook: false
+  train_loghook: true
 
 lstm: &LSTM
   <<: *DEFAULT
