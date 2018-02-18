@@ -21,6 +21,8 @@ default: &DEFAULT
     end: 2
   reserved_lang:
     unknown: 0
+  loss: xentropy
+  train_loghook: false
 
 lstm: &LSTM
   <<: *DEFAULT
@@ -32,6 +34,7 @@ lstm: &LSTM
   num_hidden: 256
   infer_seq_length: 80
   context_lines: 5
+  train_loghook: false
 
 sru:
   <<: *LSTM

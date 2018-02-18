@@ -131,16 +131,41 @@ def model_fn(features, labels, mode, params, config):
 
     if mode == ModeKeys.TRAIN or mode == ModeKeys.EVAL:
         target_mask = tf.sequence_mask(L_s, dtype=tf.float32)
-        out_logits = _transpose_batch_time(decoder_emit_ta.stack())
-        logp_loss = -tf.reduce_sum(tf.log(1e-6 + get_prob(out_logits, X_s)) * target_mask) / tf.cast(cur_batch_B,
-                                                                                                     tf.float32)
+        batch_size = tf.to_float(cur_batch_B)
+        decoder_out = _transpose_batch_time(decoder_emit_ta.stack())
+
+        xentropy_loss = tf.reduce_sum(tf.nn.sparse_softmax_cross_entropy_with_logits(labels=X_s, logits=get_logits(
+            decoder_out)) * target_mask) / batch_size
+        logp_loss = -tf.reduce_sum(tf.log(1e-6 + get_prob(decoder_out, X_s)) * target_mask) / batch_size
+
+        if params.loss == 'xentropy':
+            model_loss = xentropy_loss
+            aux_loss = logp_loss
+        elif params.loss == 'logp':
+            model_loss = logp_loss
+            aux_loss = xentropy_loss
+        else:
+            raise NotImplementedError
+
         train_op = tf.train.RMSPropOptimizer(learning_rate=params.learning_rate).minimize(
-            loss=logp_loss, global_step=tf.train.get_global_step())
+            loss=model_loss, global_step=tf.train.get_global_step())
+
+        if params.train_loghook:
+            logging_hook = [tf.train.LoggingTensorHook(tensors={'max-idx': tf.reduce_max(X_s),
+                                                                'min-idx': tf.reduce_min(X_s),
+                                                                'shape_x': tf.shape(X_s),
+                                                                'shape_out': tf.shape(decoder_out),
+                                                                'logp_loss': logp_loss,
+                                                                'xentropy_loss': xentropy_loss},
+                                                       every_n_iter=1)]
+        else:
+            logging_hook = None
 
         return tf.estimator.EstimatorSpec(
             mode=mode,
-            loss=logp_loss,
-            train_op=train_op)
+            loss=model_loss,
+            train_op=train_op,
+            training_hooks=logging_hook)
     else:
         X_sampled = _transpose_batch_time(loop_state_ta.stack())
 
