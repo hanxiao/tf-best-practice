@@ -23,6 +23,8 @@ default: &DEFAULT
     unknown: 0
   loss: xentropy
   train_loghook: true
+  gradient_clipping: true
+  max_gradient_norm: 5
 
 lstm: &LSTM
   <<: *DEFAULT

@@ -153,8 +153,21 @@ def model_fn(features, labels, mode, params, config):
         model_loss = normalize_loss(model_loss, target_mask, batch_size)
         aux_loss = normalize_loss(aux_loss, target_mask, batch_size)
 
-        train_op = tf.train.RMSPropOptimizer(learning_rate=params.learning_rate).minimize(
-            loss=model_loss, global_step=tf.train.get_global_step())
+        optimizer = {
+            'rmsp': lambda: tf.train.RMSPropOptimizer(learning_rate=params.learning_rate),
+            'adam': lambda: tf.train.AdamOptimizer(learning_rate=params.learning_rate),
+            'sgd': lambda: tf.train.GradientDescentOptimizer(learning_rate=params.learning_rate)
+        }[params.optimizer]()
+
+        if params.gradient_clipping:
+            # Calculate and clip gradients
+            all_params = tf.trainable_variables()
+            gradients = tf.gradients(model_loss, all_params)
+            clipped_gradients, _ = tf.clip_by_global_norm(gradients, params.max_gradient_norm)
+            train_op = optimizer.apply_gradients(zip(clipped_gradients, all_params),
+                                                 global_step=tf.train.get_global_step())
+        else:
+            train_op = optimizer.minimize(loss=model_loss, global_step=tf.train.get_global_step())
 
         if params.train_loghook:
             logging_hook = [tf.train.LoggingTensorHook(tensors={'max-idx': tf.reduce_max(X_s),
