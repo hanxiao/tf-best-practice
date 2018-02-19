@@ -58,7 +58,7 @@ def train(config, params, data_io, model):
 
 
 def infer(config, params, data_io, model, step=0):
-    with JobContext('generating code at step %d...', ):
+    with JobContext('generating code at step %d...' % step):
         generate(model, data_io, config.output_path + '-%d.txt' % step, 'py', params.max_infer_line)
 
 

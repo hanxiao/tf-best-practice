@@ -44,8 +44,6 @@ class DataIO:
 
             self.char2int = {c: idx for idx, c in enumerate(all_chars + freq_tokens, start=len(params.reserved_char))}
             self.lang2int = {c: idx for idx, c in enumerate(config.all_langs.values(), start=len(params.reserved_lang))}
-            self.int2char = {i: c for c, i in self.char2int.items()}
-            self.int2lang = {i: c for c, i in self.lang2int.items()}
             self.newline_char = self.char2int['\n']
 
         with JobContext('computing some statistics...'):
@@ -61,6 +59,9 @@ class DataIO:
         self.after_init(config, params)
 
     def after_init(self, config: AppConfig, params: ModelParams):
+        self.int2char = {i: c for c, i in self.char2int.items()}
+        self.int2lang = {i: c for c, i in self.lang2int.items()}
+
         params.add_hparam('num_char', self.num_char)
         params.add_hparam('num_lang', self.num_lang)
 
