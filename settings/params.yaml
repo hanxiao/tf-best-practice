@@ -11,7 +11,7 @@ default: &DEFAULT
   train_step: 10
   infer_seq_length: 100
   dim_embed: 16
-  freqword_as_char: 100
+  freqword_as_char: 400
   context_lines: 3  # number of lines as the context
   max_infer_line: 100
   share_cell: true
@@ -30,12 +30,12 @@ lstm: &LSTM
   <<: *DEFAULT
   cell: lstm
   batch_size: 128
-  train_step: 5000
+  train_step: 20000
   num_eval: 1000
   dim_embed: 128
   num_hidden: 256
   infer_seq_length: 80
-  context_lines: 5
+  context_lines: 10
   train_loghook: false
 
 sru:
