@@ -16,11 +16,6 @@ def normalize_loss(loss, mask, batch_size):
 
 
 def model_fn(features, labels, mode, params, config):
-    cur_batch_D = params.dim_embed
-
-    hinit_embed = make_var('hinit_ebd', [params.num_lang, params.num_units.encoder])
-    cinit_embed = make_var('cinit_ebd', [params.num_lang, params.num_units.encoder])
-    zero_embed = make_var('zero_embed', [params.num_lang, cur_batch_D])
     char_embd = make_var('char_ebd', [params.num_char, params.dim_embed])
 
     if mode == ModeKeys.TRAIN or mode == ModeKeys.EVAL:
@@ -40,16 +35,18 @@ def model_fn(features, labels, mode, params, config):
         'gru': lambda x, y: GRUCell(num_units=y, name=x, reuse=False)
     }[params.cell]
 
-    with tf.variable_scope('InitState'):
-        h_init = tf.nn.embedding_lookup(hinit_embed, T)
-        c_init = tf.nn.embedding_lookup(cinit_embed, T)
-        cell_init_state = {
-            'lstm': lambda: LSTMStateTuple(c_init, h_init),
-            'sru': lambda: h_init,
-            'gru': lambda: h_init,
-        }[params.cell]()
-
     with tf.variable_scope('Encoder'):
+        with tf.variable_scope('InitState'):
+            hinit_embed = make_var('hinit_ebd', [params.num_lang, params.num_units.encoder])
+            cinit_embed = make_var('cinit_ebd', [params.num_lang, params.num_units.encoder])
+            h_init = tf.nn.embedding_lookup(hinit_embed, T)
+            c_init = tf.nn.embedding_lookup(cinit_embed, T)
+            cell_init_state = {
+                'lstm': lambda: LSTMStateTuple(c_init, h_init),
+                'sru': lambda: h_init,
+                'gru': lambda: h_init,
+            }[params.cell]()
+
         # make a list of cells for dilated encoder
         encoder_cell = make_cell('encoder_cell', params.num_units.encoder)
         encoder_output, last_enc_state = \
@@ -59,22 +56,23 @@ def model_fn(features, labels, mode, params, config):
                               sequence_length=L_c,
                               dtype=tf.float32)
 
-    with tf.variable_scope('Attention'):
-        # Create an attention mechanism
-        attention_mechanism = tf.contrib.seq2seq.LuongAttention(
-            params.num_units.attention, encoder_output,
-            memory_sequence_length=L_c)
-
     with tf.variable_scope('Decoder'):
         # make a new cell for decoder
-        decoder_cell = make_cell('decoder_cell', params.num_units.attention)
-        decoder_cell = tf.contrib.seq2seq.AttentionWrapper(decoder_cell, attention_mechanism)
+        decoder_cell = make_cell('decoder_cell', params.num_units.decoder)
 
-        attention_zero = decoder_cell.zero_state(batch_size=cur_batch_B, dtype=tf.float32)
+        # with tf.variable_scope('Attention'):
+        #     # Create an attention mechanism
+        #     attention_mechanism = tf.contrib.seq2seq.LuongAttention(
+        #         params.num_units.attention, encoder_output,
+        #         memory_sequence_length=L_c)
+        #
+        #     decoder_cell = tf.contrib.seq2seq.AttentionWrapper(decoder_cell, attention_mechanism)
+        #     attention_zero = decoder_cell.zero_state(batch_size=cur_batch_B, dtype=tf.float32)
+        #     last_enc_state = attention_zero.clone(cell_state=last_enc_state)
 
-        last_enc_state = attention_zero.clone(cell_state=last_enc_state)
-
-        zero_step = tf.nn.embedding_lookup(zero_embed, T)
+        with tf.variable_scope('InitState'):
+            zero_embd = make_var('zero_embed', [params.num_lang, params.dim_embed])
+            decoder_zero = tf.nn.embedding_lookup(zero_embd, T)
 
         output_layer_info = {
             'units': params.num_char,  # this is the size of vocabulary
@@ -115,7 +113,7 @@ def model_fn(features, labels, mode, params, config):
 
                 if cell_output is None:
                     next_cell_state = last_enc_state
-                    next_step = zero_step
+                    next_step = decoder_zero
                     next_loop_state = output_ta
                 else:  # pass the last state to the next
                     next_cell_state = cell_state

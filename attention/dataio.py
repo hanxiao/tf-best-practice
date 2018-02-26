@@ -27,8 +27,8 @@ class DataIO:
         self.num_epoch = params.num_epoch
         self.pattern = re.compile(r'(\s+|[{}])'.format(re.escape(punctuation)))
         self.unknown_char_idx = params.reserved_char.unknown
-        self.start_char_idx = params.reserved_char.start
-        self.end_char_idx = params.reserved_char.end
+        self.start_line_idx = params.reserved_char.start
+        self.eof_idx = params.reserved_char.end
         self.unknown_lang_idx = params.reserved_char.unknown
 
         with JobContext('indexing all codes...'):
@@ -46,7 +46,7 @@ class DataIO:
                              enumerate(all_chars + freq_tokens, start=len(params.reserved_char.values()))}
             self.lang2int = {c: idx for idx, c in
                              enumerate(config.all_langs.values(), start=len(params.reserved_lang.values()))}
-            self.newline_char = self.char2int['\n']
+            self.end_line_idx = self.char2int['\n']
 
         with JobContext('computing some statistics...'):
             self.num_line = b.count().compute()
@@ -55,7 +55,7 @@ class DataIO:
             logger.info('# lines: %d' % self.num_line)
             logger.info('# chars: %d (# reserved: %d)' % (self.num_char, len(params.reserved_char.values())))
             logger.info('# langs: %d (# reserved: %d)' % (self.num_lang, len(params.reserved_lang.values())))
-            logger.info('linebreak idx: %d' % self.newline_char)
+            logger.info('linebreak idx: %d' % self.end_line_idx)
 
         self.dump(config.dataio_path)
         self.after_init(config, params)
@@ -66,6 +66,7 @@ class DataIO:
 
         params.add_hparam('num_char', self.num_char)
         params.add_hparam('num_lang', self.num_lang)
+        params.add_hparam('start_line_idx', self.start_line_idx)
 
         with JobContext('building data generator...'):
             self.build_infer_fn(config, params)
@@ -96,18 +97,18 @@ class DataIO:
         r = []
         eof = False
         for j in predictions[0]:
-            if j == self.end_char_idx:
+            if j == self.eof_idx:
                 eof = True
                 break
-            elif j == self.newline_char:
+            elif j == self.end_line_idx:
                 break
-            elif j == self.start_char_idx:
+            elif j == self.start_line_idx:
                 r.append('<START>')
             elif j == self.unknown_char_idx:
                 r.append('<UNKNOWN>')
             else:
                 r.append(self.int2char[j])
-        if r and r[-1] != self.newline_char:
+        if r and r[-1] != self.end_line_idx:
             r.append('\n')
         return ''.join(r), eof
 
@@ -118,7 +119,7 @@ class DataIO:
             for f, lang in file_list:
                 with open(f) as fp:
                     linebreak = list(range(params.context_lines))
-                    context = [[self.start_char_idx]] * params.context_lines
+                    context = [[self.start_line_idx]] * params.context_lines
                     all_lines = fp.readlines()
                     for line in all_lines:
                         next_line = self.tokenize_by_keywords(line)
@@ -135,7 +136,7 @@ class DataIO:
                         linebreak.pop(0)
 
                     context_line = flatten(context)
-                    yield context_line, [self.end_char_idx], \
+                    yield context_line, [self.eof_idx], \
                           len(context_line), 1, \
                           self.lang2int.get(lang, self.unknown_lang_idx), \
                           linebreak
@@ -152,7 +153,7 @@ class DataIO:
     def build_infer_fn(self, config: AppConfig, params: ModelParams):
         def gen():
             linebreaks = list(range(params.context_lines))
-            context = [[self.start_char_idx]] * params.context_lines
+            context = [[self.start_line_idx]] * params.context_lines
 
             with open(self.infer_out_fn) as fp:
                 all_lines = [self.tokenize_by_keywords(v) for v in fp.readlines()]
