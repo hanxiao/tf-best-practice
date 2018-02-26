@@ -18,8 +18,8 @@ def normalize_loss(loss, mask, batch_size):
 def model_fn(features, labels, mode, params, config):
     cur_batch_D = params.dim_embed
 
-    hinit_embed = make_var('hinit_ebd', [params.num_lang, params.num_hidden])
-    cinit_embed = make_var('cinit_ebd', [params.num_lang, params.num_hidden])
+    hinit_embed = make_var('hinit_ebd', [params.num_lang, params.num_units.encoder])
+    cinit_embed = make_var('cinit_ebd', [params.num_lang, params.num_units.encoder])
     zero_embed = make_var('zero_embed', [params.num_lang, cur_batch_D])
     char_embd = make_var('char_ebd', [params.num_char, params.dim_embed])
 
@@ -38,9 +38,9 @@ def model_fn(features, labels, mode, params, config):
     br_idx = tf.stack([tmp_mask, B], axis=2)
 
     make_cell = {
-        'lstm': lambda x: LSTMCell(params.num_hidden, name=x, reuse=False),
-        'sru': lambda x: SRUCell(params.num_hidden, name=x, reuse=False),
-        'gru': lambda x: GRUCell(params.num_hidden, name=x, reuse=False)
+        'lstm': lambda x: LSTMCell(params.num_units.encoder, name=x, reuse=False),
+        'sru': lambda x: SRUCell(params.num_units.encoder, name=x, reuse=False),
+        'gru': lambda x: GRUCell(params.num_units.encoder, name=x, reuse=False)
     }[params.cell]
 
     with tf.variable_scope('InitState'):
