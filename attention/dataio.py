@@ -26,13 +26,13 @@ class DataIO:
         self.batch_size = params.batch_size
         self.num_epoch = params.num_epoch
         self.pattern = re.compile(r'(\s+|[{}])'.format(re.escape(punctuation)))
-        self.unknown_char_idx = params.reserved_char['unknown']
-        self.start_char_idx = params.reserved_char['start']
-        self.end_char_idx = params.reserved_char['end']
-        self.unknown_lang_idx = params.reserved_char['unknown']
+        self.unknown_char_idx = params.reserved_char.unknown
+        self.start_char_idx = params.reserved_char.start
+        self.end_char_idx = params.reserved_char.end
+        self.unknown_lang_idx = params.reserved_char.unknown
 
         with JobContext('indexing all codes...'):
-            b = db.read_text([config.data_dir + '*.' + v for v in config.all_langs.values()])
+            b = db.read_text([config.data_dir + '*.' + v for v in config.all_langs.values().values()])
             tokens = b.map(lambda x: self.tokenize(x)).flatten()
 
             # get frequent tokens with length > 1
@@ -42,8 +42,10 @@ class DataIO:
             # get all characters
             all_chars = b.flatten().distinct().filter(lambda x: x).compute()
 
-            self.char2int = {c: idx for idx, c in enumerate(all_chars + freq_tokens, start=len(params.reserved_char))}
-            self.lang2int = {c: idx for idx, c in enumerate(config.all_langs.values(), start=len(params.reserved_lang))}
+            self.char2int = {c: idx for idx, c in
+                             enumerate(all_chars + freq_tokens, start=len(params.reserved_char.values()))}
+            self.lang2int = {c: idx for idx, c in
+                             enumerate(config.all_langs.values(), start=len(params.reserved_lang.values()))}
             self.newline_char = self.char2int['\n']
 
         with JobContext('computing some statistics...'):
@@ -51,8 +53,8 @@ class DataIO:
             self.num_char = max(self.char2int.values()) + 1
             self.num_lang = max(self.lang2int.values()) + 1
             logger.info('# lines: %d' % self.num_line)
-            logger.info('# chars: %d (# reserved: %d)' % (self.num_char, len(params.reserved_char)))
-            logger.info('# langs: %d (# reserved: %d)' % (self.num_lang, len(params.reserved_lang)))
+            logger.info('# chars: %d (# reserved: %d)' % (self.num_char, len(params.reserved_char.values())))
+            logger.info('# langs: %d (# reserved: %d)' % (self.num_lang, len(params.reserved_lang.values())))
             logger.info('linebreak idx: %d' % self.newline_char)
 
         self.dump(config.dataio_path)

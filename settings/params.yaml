@@ -3,14 +3,17 @@ default: &DEFAULT
   batch_size: 32
   cell: lstm
   dilation: [1, 2, 4, 8, 16, 32]
-  num_hidden: 3
+  num_units:
+    encoder: 17
+    decoder: 13
+    attention: 7
   num_epoch: 1000
   optimizer: rmsp
   learning_rate: 1.0e-4
   num_eval: 100
   train_step: 10
   infer_seq_length: 100
-  dim_embed: 16
+  dim_embed: 17
   freqword_as_char: 400
   context_lines: 3  # number of lines as the context
   max_infer_line: 100
@@ -25,8 +28,6 @@ default: &DEFAULT
   train_loghook: true
   gradient_clipping: true
   max_gradient_norm: 5
-  attention:
-    num_unit: 64
   bilevel: true
 
 lstm: &LSTM
@@ -36,7 +37,6 @@ lstm: &LSTM
   train_step: 20000
   num_eval: 1000
   dim_embed: 128
-  num_hidden: 256
   infer_seq_length: 80
   context_lines: 10
   train_loghook: false

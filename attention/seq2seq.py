@@ -18,8 +18,8 @@ def normalize_loss(loss, mask, batch_size):
 def model_fn(features, labels, mode, params, config):
     cur_batch_D = params.dim_embed
 
-    hinit_embed = make_var('hinit_ebd', [params.num_lang, params.num_hidden])
-    cinit_embed = make_var('cinit_ebd', [params.num_lang, params.num_hidden])
+    hinit_embed = make_var('hinit_ebd', [params.num_lang, params.num_units.encoder])
+    cinit_embed = make_var('cinit_ebd', [params.num_lang, params.num_units.encoder])
     zero_embed = make_var('zero_embed', [params.num_lang, cur_batch_D])
     char_embd = make_var('char_ebd', [params.num_char, params.dim_embed])
 
@@ -34,13 +34,10 @@ def model_fn(features, labels, mode, params, config):
         X_c, L_c, T, B = features  # only give the context info
         cur_batch_T = params.infer_seq_length
 
-    tmp_mask = tf.tile(tf.expand_dims(tf.range(0, tf.shape(X_c)[0]), 1), [1, params.context_lines])
-    br_idx = tf.stack([tmp_mask, B], axis=2)
-
     make_cell = {
-        'lstm': lambda x: LSTMCell(params.num_hidden, name=x, reuse=False),
-        'sru': lambda x: SRUCell(params.num_hidden, name=x, reuse=False),
-        'gru': lambda x: GRUCell(params.num_hidden, name=x, reuse=False)
+        'lstm': lambda x, y: LSTMCell(num_units=y, name=x, reuse=False),
+        'sru': lambda x, y: SRUCell(num_units=y, name=x, reuse=False),
+        'gru': lambda x, y: GRUCell(num_units=y, name=x, reuse=False)
     }[params.cell]
 
     with tf.variable_scope('InitState'):
@@ -54,7 +51,7 @@ def model_fn(features, labels, mode, params, config):
 
     with tf.variable_scope('Encoder'):
         # make a list of cells for dilated encoder
-        encoder_cell = make_cell('encoder_cell')
+        encoder_cell = make_cell('encoder_cell', params.num_units.encoder)
         encoder_output, last_enc_state = \
             tf.nn.dynamic_rnn(encoder_cell,
                               tf.nn.embedding_lookup(char_embd, X_c, name='ebd_context_seq'),
@@ -65,12 +62,12 @@ def model_fn(features, labels, mode, params, config):
     with tf.variable_scope('Attention'):
         # Create an attention mechanism
         attention_mechanism = tf.contrib.seq2seq.LuongAttention(
-            params.attention['num_unit'], encoder_output,
+            params.num_units.attention, encoder_output,
             memory_sequence_length=L_c)
 
     with tf.variable_scope('Decoder'):
         # make a new cell for decoder
-        decoder_cell = encoder_cell if params.share_cell else make_cell('decoder_cell')
+        decoder_cell = make_cell('decoder_cell', params.num_units.attention)
         decoder_cell = tf.contrib.seq2seq.AttentionWrapper(decoder_cell, attention_mechanism)
 
         attention_zero = decoder_cell.zero_state(batch_size=cur_batch_B, dtype=tf.float32)

@@ -6,11 +6,13 @@ default: &DEFAULT
   script_dir: script/
   output_dir: output/
   model_dir: model/
-  all_langs: {'python': 'py'}
+  all_langs:
+    python: py
   log_format: '%(asctime)s:%(filename)s:%(funcName)s:[%(levelname)s] %(message)s'
 
 aws: &AWS
   <<: *DEFAULT
   work_dir: ./
   data_dir: './tensorflow/**/'
-  all_langs: {'python': 'py'}
+  all_langs:
+    python: py

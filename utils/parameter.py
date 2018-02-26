@@ -3,18 +3,28 @@ import shutil
 from datetime import datetime
 
 from ruamel.yaml import YAML
+from ruamel.yaml.comments import CommentedMap
 from tensorflow.contrib.training import HParams
 
 from utils.helper import touch_dir
 from utils.logger import get_logger
 
 
+def add_param_recur(root, p_tree):
+    for k, v in p_tree:
+        if isinstance(v, CommentedMap):
+            new_node = HParams()
+            add_param_recur(new_node, v.items())
+            root.add_hparam(k, new_node)
+        else:
+            root.add_hparam(k, v)
+
+
 class YParams(HParams):
     def __init__(self, yaml_fn, config_name):
         super().__init__()
         with open(yaml_fn) as fp:
-            for k, v in YAML().load(fp)[config_name].items():
-                self.add_hparam(k, v)
+            add_param_recur(self, YAML().load(fp)[config_name].items())
         self.yaml_fn = yaml_fn
 
     def copyto(self, dir):
