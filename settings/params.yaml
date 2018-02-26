@@ -11,7 +11,7 @@ default: &DEFAULT
   optimizer: rmsp
   learning_rate: 1.0e-4
   num_eval: 100
-  train_step: 10
+  train_step: 100
   infer_seq_length: 100
   dim_embed: 19
   freqword_as_char: 400

@@ -30,9 +30,10 @@ class DataIO:
         self.start_char_idx = params.reserved_char.start
         self.end_char_idx = params.reserved_char.end
         self.unknown_lang_idx = params.reserved_char.unknown
+        self.lang_suffix = list(config.all_langs.values().values())
 
         with JobContext('indexing all codes...'):
-            b = db.read_text([config.data_dir + '*.' + v for v in config.all_langs.values().values()])
+            b = db.read_text([config.data_dir + '*.' + v for v in self.lang_suffix])
             tokens = b.map(lambda x: self.tokenize(x)).flatten()
 
             # get frequent tokens with length > 1
@@ -45,7 +46,7 @@ class DataIO:
             self.char2int = {c: idx for idx, c in
                              enumerate(all_chars + freq_tokens, start=len(params.reserved_char.values()))}
             self.lang2int = {c: idx for idx, c in
-                             enumerate(config.all_langs.values(), start=len(params.reserved_lang.values()))}
+                             enumerate(self.lang_suffix, start=len(params.reserved_lang.values()))}
             self.newline_char = self.char2int['\n']
 
         with JobContext('computing some statistics...'):
@@ -113,7 +114,7 @@ class DataIO:
 
     def build_train_fn(self, config: AppConfig, params: ModelParams):
         def gen():
-            file_list = [(w, v) for v in config.all_langs.values() for w in
+            file_list = [(w, v) for v in self.lang_suffix for w in
                          glob(config.data_dir + '*.' + v, recursive=True)]
             for f, lang in file_list:
                 with open(f) as fp:
