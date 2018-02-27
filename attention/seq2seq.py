@@ -60,15 +60,15 @@ def model_fn(features, labels, mode, params, config):
         # make a new cell for decoder
         decoder_cell = make_cell('decoder_cell', params.num_units.decoder)
 
-        # with tf.variable_scope('Attention'):
-        #     # Create an attention mechanism
-        #     attention_mechanism = tf.contrib.seq2seq.LuongAttention(
-        #         params.num_units.attention, encoder_output,
-        #         memory_sequence_length=L_c)
-        #
-        #     decoder_cell = tf.contrib.seq2seq.AttentionWrapper(decoder_cell, attention_mechanism)
-        #     attention_zero = decoder_cell.zero_state(batch_size=cur_batch_B, dtype=tf.float32)
-        #     last_enc_state = attention_zero.clone(cell_state=last_enc_state)
+        with tf.variable_scope('Attention'):
+            # Create an attention mechanism
+            attention_mechanism = tf.contrib.seq2seq.LuongAttention(
+                params.num_units.attention, encoder_output,
+                memory_sequence_length=L_c)
+
+            decoder_cell = tf.contrib.seq2seq.AttentionWrapper(decoder_cell, attention_mechanism)
+            attention_zero = decoder_cell.zero_state(batch_size=cur_batch_B, dtype=tf.float32)
+            last_enc_state = attention_zero.clone(cell_state=last_enc_state)
 
         with tf.variable_scope('InitState'):
             zero_embd = make_var('zero_embed', [params.num_lang, params.dim_embed])

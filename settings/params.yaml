@@ -6,7 +6,7 @@ default: &DEFAULT
   num_units:
     encoder: 17
     decoder: 17
-    attention: 7
+    attention: 17
   num_epoch: 1000
   optimizer: rmsp
   learning_rate: 1.0e-4
