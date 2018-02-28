@@ -19,14 +19,14 @@ def model_fn(features, labels, mode, params, config):
     char_embd = make_var('char_ebd', [params.num_char, params.dim_embed])
 
     if mode == ModeKeys.TRAIN or mode == ModeKeys.EVAL:
-        X_c, X_s, L_c, L_s, T, B = features
-        cur_batch_B = tf.shape(X_s)[0]
-        cur_batch_T = tf.shape(X_s)[1]
-        Xs_embd = tf.nn.embedding_lookup(char_embd, X_s, name='ebd_nextline_seq')
-        Xs_ta = tf.TensorArray(size=cur_batch_T, dtype=tf.float32).unstack(
-            _transpose_batch_time(Xs_embd), 'TBD_Formatted_Xs')
+        X_context, X_target, T_context, T_target, LANG, BRK = features
+        cur_batch_B = tf.shape(X_target)[0]
+        cur_batch_T = tf.shape(X_target)[1]
+        Xt_embd = tf.nn.embedding_lookup(char_embd, X_target, name='ebd_nextline_seq')
+        Xt_ta = tf.TensorArray(size=cur_batch_T, dtype=tf.float32).unstack(
+            _transpose_batch_time(Xt_embd), 'TBD_Formatted_Xs')
     else:
-        X_c, L_c, T, B = features  # only give the context info
+        X_context, T_context, LANG, BRK = features  # only give the context info
         cur_batch_T = params.infer_seq_length
 
     make_cell = {
@@ -39,8 +39,8 @@ def model_fn(features, labels, mode, params, config):
         with tf.variable_scope('InitState'):
             hinit_embed = make_var('hinit_ebd', [params.num_lang, params.num_units.encoder])
             cinit_embed = make_var('cinit_ebd', [params.num_lang, params.num_units.encoder])
-            h_init = tf.nn.embedding_lookup(hinit_embed, T)
-            c_init = tf.nn.embedding_lookup(cinit_embed, T)
+            h_init = tf.nn.embedding_lookup(hinit_embed, LANG)
+            c_init = tf.nn.embedding_lookup(cinit_embed, LANG)
             cell_init_state = {
                 'lstm': lambda: LSTMStateTuple(c_init, h_init),
                 'sru': lambda: h_init,
@@ -51,9 +51,9 @@ def model_fn(features, labels, mode, params, config):
         encoder_cell = make_cell('encoder_cell', params.num_units.encoder)
         encoder_output, last_enc_state = \
             tf.nn.dynamic_rnn(encoder_cell,
-                              tf.nn.embedding_lookup(char_embd, X_c, name='ebd_context_seq'),
+                              tf.nn.embedding_lookup(char_embd, X_context, name='ebd_context_seq'),
                               initial_state=cell_init_state,
-                              sequence_length=L_c,
+                              sequence_length=T_context,
                               dtype=tf.float32)
 
     with tf.variable_scope('Decoder'):
@@ -64,7 +64,7 @@ def model_fn(features, labels, mode, params, config):
             # Create an attention mechanism
             attention_mechanism = tf.contrib.seq2seq.LuongAttention(
                 params.num_units.attention, encoder_output,
-                memory_sequence_length=L_c)
+                memory_sequence_length=T_context)
 
             decoder_cell = tf.contrib.seq2seq.AttentionWrapper(decoder_cell, attention_mechanism)
             attention_zero = decoder_cell.zero_state(batch_size=cur_batch_B, dtype=tf.float32)
@@ -72,7 +72,7 @@ def model_fn(features, labels, mode, params, config):
 
         with tf.variable_scope('InitState'):
             zero_embd = make_var('zero_embed', [params.num_lang, params.dim_embed])
-            decoder_zero = tf.nn.embedding_lookup(zero_embd, T)
+            decoder_zero = tf.nn.embedding_lookup(zero_embd, LANG)
 
         output_layer_info = {
             'units': params.num_char,  # this is the size of vocabulary
@@ -118,7 +118,7 @@ def model_fn(features, labels, mode, params, config):
                 else:  # pass the last state to the next
                     next_cell_state = cell_state
                     if mode == ModeKeys.TRAIN or mode == ModeKeys.EVAL:
-                        next_step = Xs_ta.read(time - 1)
+                        next_step = Xt_ta.read(time - 1)
                         next_loop_state = loop_state.write(time - 1, next_step)
                     else:
                         next_symbol = get_dist(cell_output).sample()
@@ -126,7 +126,7 @@ def model_fn(features, labels, mode, params, config):
                         next_loop_state = loop_state.write(time - 1, next_symbol)
 
                 if mode == ModeKeys.TRAIN or mode == ModeKeys.EVAL:
-                    elements_finished = (time >= L_s)
+                    elements_finished = (time >= T_target)
                 else:
                     elements_finished = (time >= cur_batch_T)
 
@@ -135,12 +135,12 @@ def model_fn(features, labels, mode, params, config):
             decoder_emit_ta, _, loop_state_ta = tf.nn.raw_rnn(decoder_cell, loop_fn)
 
     if mode == ModeKeys.TRAIN or mode == ModeKeys.EVAL:
-        target_mask = tf.sequence_mask(L_s, dtype=tf.int32)
+        target_mask = tf.sequence_mask(T_target, dtype=tf.int32)
         batch_size = tf.to_float(cur_batch_B)
         decoder_out = _transpose_batch_time(decoder_emit_ta.stack())
 
-        xentropy_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=X_s, logits=get_logits(decoder_out))
-        logp_loss = -tf.log(1e-6 + get_prob(decoder_out, X_s))
+        xentropy_loss = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=X_target, logits=get_logits(decoder_out))
+        logp_loss = -tf.log(1e-6 + get_prob(decoder_out, X_target))
 
         if params.loss == 'xentropy':
             model_loss = xentropy_loss
@@ -171,9 +171,9 @@ def model_fn(features, labels, mode, params, config):
             train_op = optimizer.minimize(loss=model_loss, global_step=tf.train.get_global_step())
 
         if params.train_loghook:
-            logging_hook = [tf.train.LoggingTensorHook(tensors={'max-idx': tf.reduce_max(X_s),
-                                                                'min-idx': tf.reduce_min(X_s),
-                                                                'shape_x': tf.shape(X_s),
+            logging_hook = [tf.train.LoggingTensorHook(tensors={'max-idx': tf.reduce_max(X_target),
+                                                                'min-idx': tf.reduce_min(X_target),
+                                                                'shape_x': tf.shape(X_target),
                                                                 'shape_out': tf.shape(decoder_out),
                                                                 'model_loss': model_loss,
                                                                 'aux_loss': aux_loss},
