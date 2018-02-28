@@ -12,12 +12,12 @@ def make_var(name, shape):
 
 
 def model_fn(features, labels, mode, params, config):
-    cur_batch_D = params.dim_embed
+    cur_batch_D = params.num_units.embedding
 
     hinit_embed = make_var('hinit_ebd', [params.num_lang, params.num_hidden])
     cinit_embed = make_var('cinit_ebd', [params.num_lang, params.num_hidden])
     zero_embed = make_var('zero_embed', [params.num_lang, cur_batch_D])
-    char_embd = make_var('char_ebd', [params.num_char, params.dim_embed])
+    char_embd = make_var('char_ebd', [params.num_char, params.num_units.embedding])
 
     if mode == ModeKeys.TRAIN or mode == ModeKeys.EVAL:
         X_c, X_s, L_c, L_s, T = features
@@ -27,7 +27,7 @@ def model_fn(features, labels, mode, params, config):
             _transpose_batch_time(Xs_embd), 'TBD_Formatted_Xs')
     else:
         X_c, T = features  # only give the context info
-        cur_batch_T = params.infer_seq_length
+        cur_batch_T = params.infer.len_sequence
 
     make_cell = {
         'lstm': lambda x: LSTMCell(params.num_hidden, name=x, reuse=False),

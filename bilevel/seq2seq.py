@@ -16,12 +16,12 @@ def normalize_loss(loss, mask, batch_size):
 
 
 def model_fn(features, labels, mode, params, config):
-    cur_batch_D = params.dim_embed
+    cur_batch_D = params.num_units.embedding
 
     hinit_embed = make_var('hinit_ebd', [params.num_lang, params.num_units.encoder])
     cinit_embed = make_var('cinit_ebd', [params.num_lang, params.num_units.encoder])
     zero_embed = make_var('zero_embed', [params.num_lang, cur_batch_D])
-    char_embd = make_var('char_ebd', [params.num_char, params.dim_embed])
+    char_embd = make_var('char_ebd', [params.num_char, params.num_units.embedding])
 
     if mode == ModeKeys.TRAIN or mode == ModeKeys.EVAL:
         X_c, X_s, L_c, L_s, T, B = features
@@ -32,7 +32,7 @@ def model_fn(features, labels, mode, params, config):
             _transpose_batch_time(Xs_embd), 'TBD_Formatted_Xs')
     else:
         X_c, L_c, T, B = features  # only give the context info
-        cur_batch_T = params.infer_seq_length
+        cur_batch_T = params.infer.len_sequence
 
     tmp_mask = tf.tile(tf.expand_dims(tf.range(0, tf.shape(X_c)[0]), 1), [1, params.context_lines])
     br_idx = tf.stack([tmp_mask, B], axis=2)

@@ -16,7 +16,7 @@ def normalize_loss(loss, mask, batch_size):
 
 
 def model_fn(features, labels, mode, params, config):
-    char_embd = make_var('char_ebd', [params.num_char, params.dim_embed])
+    char_embd = make_var('char_ebd', [params.num_char, params.num_units.embedding])
 
     if mode == ModeKeys.TRAIN or mode == ModeKeys.EVAL:
         X_context, X_target, T_context, T_target, LANG, BRK = features
@@ -27,7 +27,8 @@ def model_fn(features, labels, mode, params, config):
             _transpose_batch_time(Xt_embd), 'TBD_Formatted_Xs')
     else:
         X_context, T_context, LANG, BRK = features  # only give the context info
-        cur_batch_T = params.infer_seq_length
+        cur_batch_B = 1
+        cur_batch_T = params.infer.len_sequence
 
     make_cell = {
         'lstm': lambda x, y: LSTMCell(num_units=y, name=x, reuse=False),
@@ -71,7 +72,7 @@ def model_fn(features, labels, mode, params, config):
             last_enc_state = attention_zero.clone(cell_state=last_enc_state)
 
         with tf.variable_scope('InitState'):
-            zero_embd = make_var('zero_embed', [params.num_lang, params.dim_embed])
+            zero_embd = make_var('zero_embed', [params.num_lang, params.num_units.embedding])
             decoder_zero = tf.nn.embedding_lookup(zero_embd, LANG)
 
         output_layer_info = {

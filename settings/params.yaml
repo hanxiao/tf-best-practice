@@ -4,19 +4,20 @@ default: &DEFAULT
   cell: lstm
   dilation: [1, 2, 4, 8, 16, 32]
   num_units:
+    embedding: 19  # size of the embedding layer
     encoder: 17
-    decoder: 17
-    attention: 17
+    decoder: 17  # must be same as encoder for now
+    attention: 17  # when using luong attention, must be same as encoder
   num_epoch: 1000
   optimizer: rmsp
   learning_rate: 1.0e-4
   num_eval: 100
-  train_step: 100
-  infer_seq_length: 100
-  dim_embed: 19
+  train_step: 10
   freqword_as_char: 400
   context_lines: 3  # number of lines as the context
-  max_infer_line: 100
+  infer:
+    len_sequence: 100
+    num_line: 100
   share_cell: true
   reserved_char:
     unknown: 0
@@ -36,10 +37,13 @@ lstm: &LSTM
   batch_size: 128
   train_step: 20000
   num_eval: 1000
-  dim_embed: 128
-  infer_seq_length: 80
   context_lines: 10
   train_loghook: false
+  num_units:
+    embedding: 128  # size of the embedding layer
+    encoder: 128
+    decoder: 128  # must be same as encoder for now
+    attention: 128  # when using luong attention, must be same as encoder
 
 sru:
   <<: *LSTM
