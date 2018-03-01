@@ -11,13 +11,14 @@ default: &DEFAULT
   num_epoch: 1000
   optimizer: rmsp
   learning_rate: 1.0e-4
-  num_eval: 100
-  train_step: 10
+  num_eval: 100  # hold-out set for evaluation
+  train_step: 10  # do inference after every x steps
   freqword_as_char: 400
   context_lines: 3  # number of lines as the context
   infer:
     len_sequence: 100
     num_line: 100
+    sampling: greedy  # or greedy, or beam (not implemented yet)
   share_cell: true
   reserved_char:
     unknown: 0
@@ -29,7 +30,6 @@ default: &DEFAULT
   train_loghook: true
   gradient_clipping: true
   max_gradient_norm: 5
-  bilevel: true
 
 lstm: &LSTM
   <<: *DEFAULT

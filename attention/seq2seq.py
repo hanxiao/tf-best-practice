@@ -23,7 +23,7 @@ def model_fn(features, labels, mode, params, config):
         cur_batch_B = tf.shape(X_target)[0]
         cur_batch_T = tf.shape(X_target)[1]
         Xt_embd = tf.nn.embedding_lookup(char_embd, X_target, name='ebd_nextline_seq')
-        Xt_ta = tf.TensorArray(size=cur_batch_T, dtype=tf.float32).unstack(
+        Xt_timemajor = tf.TensorArray(size=cur_batch_T, dtype=tf.float32).unstack(
             _transpose_batch_time(Xt_embd), 'TBD_Formatted_Xs')
     else:
         X_context, T_context, LANG, BRK = features  # only give the context info
@@ -93,6 +93,9 @@ def model_fn(features, labels, mode, params, config):
             with tf.variable_scope(dense_layer_scope, reuse=True):
                 return tf.layers.dense(cell_out, **output_layer_info)
 
+        def get_best(cell_out):
+            return tf.argmax(get_logits(cell_out), 1, output_type=tf.int32)
+
         def get_dist(cell_out):
             return Categorical(logits=get_logits(cell_out),
                                name='categorical_dist',
@@ -119,10 +122,14 @@ def model_fn(features, labels, mode, params, config):
                 else:  # pass the last state to the next
                     next_cell_state = cell_state
                     if mode == ModeKeys.TRAIN or mode == ModeKeys.EVAL:
-                        next_step = Xt_ta.read(time - 1)
+                        next_step = Xt_timemajor.read(time - 1)
                         next_loop_state = loop_state.write(time - 1, next_step)
                     else:
-                        next_symbol = get_dist(cell_output).sample()
+                        next_symbol = {
+                            'random': lambda: get_dist(cell_output).sample(),
+                            'greedy': lambda: get_best(cell_output)
+                        }[params.infer.sampling]()
+
                         next_step = tf.nn.embedding_lookup(char_embd, next_symbol)
                         next_loop_state = loop_state.write(time - 1, next_symbol)
 
