@@ -34,7 +34,7 @@ default: &DEFAULT
 lstm: &LSTM
   <<: *DEFAULT
   cell: lstm
-  batch_size: 128
+  batch_size: 256
   train_step: 20000
   num_eval: 1000
   context_lines: 10
