@@ -4,7 +4,8 @@ from tensorflow.python.ops.distributions.categorical import Categorical
 from tensorflow.python.ops.rnn import _transpose_batch_time
 from tensorflow.python.ops.rnn_cell_impl import LSTMStateTuple, LSTMCell, GRUCell
 
-from utils.sru import SRUCell
+
+# from utils.sru import SRUCell
 
 
 def make_var(name, shape):
@@ -32,7 +33,7 @@ def model_fn(features, labels, mode, params, config):
 
     make_cell = {
         'lstm': lambda x, y: LSTMCell(num_units=y, name=x, reuse=False),
-        'sru': lambda x, y: SRUCell(num_units=y, name=x, reuse=False),
+        # 'sru': lambda x, y: SRUCell(num_units=y, name=x, reuse=False),
         'gru': lambda x, y: GRUCell(num_units=y, name=x, reuse=False)
     }[params.cell]
 
